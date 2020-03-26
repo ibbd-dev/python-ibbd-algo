@@ -19,7 +19,7 @@ pip3 install git+https://github.com/ibbd-dev/python-ibbd-algo.git
 scikit-learn中包含很多聚类的算法，但是在使用的过程中发现一个比较大的问题，如optics算法，不能自定义距离，只能造一个轮子。
 
 ```python
-from ClusterAlgo import Optics
+from ibbd_algo.optics import Optics
 
 points = [
     np.array((1, 1)),
