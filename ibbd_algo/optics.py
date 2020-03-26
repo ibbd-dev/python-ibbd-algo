@@ -124,6 +124,10 @@ class Optics:
         return self.ordered
 
     def cluster(self, cluster_threshold):
+        """
+        :param cluster_threshold float 聚类阀值
+        :return labels 对应输入的每个点的类别
+        """
         separators = []
         for i in range(len(self.ordered)):
             this_i = i
@@ -141,7 +145,13 @@ class Optics:
             if end - start >= self.min_cluster_size:
                 clusters.append(self.ordered[start:end])
 
-        return clusters
+        # 转换成labels的形式
+        labels = np.full(len(self.points), -1)
+        for i, points in enumerate(clusters):
+            idx = [p.index for p in points]
+            labels[idx] = i
+
+        return labels
 
 
 if __name__ == "__main__":
@@ -157,14 +167,11 @@ if __name__ == "__main__":
     # 使用欧氏距离
     optics = Optics(4, 2)
     optics.fit(points)
-    clusters = optics.cluster(2)
+    labels = optics.cluster(2)
     """
-    输出：
-    [[1 1], [2 2], [1 3]]
-    [[4 6], [5 7]]
+    输出：[0 0 0 1 1]
     """
-    for cluster in clusters:
-        print(cluster)
+    print(labels)
 
     # 构造距离矩阵
     n = len(points)
@@ -176,8 +183,5 @@ if __name__ == "__main__":
 
     optics = Optics(4, 2, matrix=matrix)
     optics.fit(points)
-    clusters = optics.cluster(2)
-    for cluster in clusters:
-        print(cluster)
-        for p in cluster:
-            print(p.data, type(p), p.index)
+    labels = optics.cluster(2)
+    print(labels)

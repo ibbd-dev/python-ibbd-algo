@@ -32,11 +32,9 @@ points = [
 # 默认使用欧氏距离
 optics = Optics(4, 2)
 optics.fit(points)
-clusters = optics.cluster(2)
-
-for cluster in clusters:
-    print(len(cluster))
-    print(cluster)
+labels = optics.cluster(2)
+print(labels)
+# 输出：[0 0 0 1 1]
 ```
 
 可以使用自定义距离：
