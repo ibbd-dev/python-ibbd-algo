@@ -132,7 +132,7 @@ class Optics:
         for i in range(len(self.ordered)):
             this_i = i
             this_p = self.ordered[i]
-            this_rd = this_p.rd if this_p.rd else self.inf
+            this_rd = this_p.rd if this_p.rd is not None else self.inf
             # use an upper limit to separate the clusters
             if this_rd > cluster_threshold:
                 separators.append(this_i)
