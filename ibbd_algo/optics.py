@@ -132,7 +132,7 @@ class Optics:
         for i in range(len(self.ordered)):
             this_i = i
             this_p = self.ordered[i]
-            this_rd = this_p.rd if this_p.rd else self.inf
+            this_rd = this_p.rd if this_p.rd is not None else self.inf
             # use an upper limit to separate the clusters
             if this_rd > cluster_threshold:
                 separators.append(this_i)
@@ -172,6 +172,21 @@ if __name__ == "__main__":
     输出：[0 0 0 1 1]
     """
     print(labels)
+    assert max(labels) == 1 and min(labels) == 0
+
+    def distance_test(p1, p2):
+        if p1.index in [1, 2] and p2.index in [1, 2]:
+            return 10000
+        return 0
+
+    # 使用自定义距离
+    optics = Optics(4, 2, distance=distance_test)
+    optics.fit(points)
+    labels = optics.cluster(2)
+    """
+    输出：[0 0 0 0 0]
+    """
+    assert len(set(labels)) == 1 and labels[0] == 0
 
     # 构造距离矩阵
     n = len(points)
