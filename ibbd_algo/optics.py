@@ -9,7 +9,7 @@ import numpy as np
 
 def euclidean(p1, p2):
     """欧氏距离"""
-    return np.linalg.norm(p1.data - p2.data)
+    return np.linalg.norm(p1 - p2)
 
 
 class Point:
@@ -41,19 +41,18 @@ class Optics:
         self.min_cluster_size = min_cluster_size
 
         # 初始化距离参数
+        self.matrix = matrix
+        self.distance_func = euclidean
         if distance is not None:
-            self.distance = distance
+            self.distance_func = distance
         elif matrix is not None:
             assert type(matrix) == np.ndarray
             self.matrix = matrix
-            self.distance = self.matrix_dist
-        else:
-            # 这两个参数不能全为None
-            self.distance = euclidean
 
-    def matrix_dist(self, p1, p2):
-        """计算两点之间的距离"""
-        return self.matrix[p1.index, p2.index]
+    def distance(self, p1, p2):
+        if self.matrix is not None:
+            return self.matrix[p1.index, p2.index]
+        return self.distance_func(p1.data, p2.data)
 
     def _core_distance(self, point, neighbors):
         # distance from a point to its nth neighbor (n = min_cluser_size)
@@ -175,20 +174,17 @@ if __name__ == "__main__":
     assert max(labels) == 1 and min(labels) == 0
 
     def distance_test(p1, p2):
-        if p1.index in [1, 2] and p2.index in [1, 2]:
-            return 10000
-        return 0
+        return abs(sum(p1)-sum(p2))
 
     # 使用自定义距离
+    print("自定义距离: ")
     optics = Optics(4, 2, distance=distance_test)
     optics.fit(points)
     labels = optics.cluster(2)
-    """
-    输出：[0 0 0 0 0]
-    """
-    assert len(set(labels)) == 1 and labels[0] == 0
+    print(labels)
 
     # 构造距离矩阵
+    print("构造距离矩阵: ")
     n = len(points)
     matrix = np.full((n, n), 0.0)
     for i in range(n-1):
