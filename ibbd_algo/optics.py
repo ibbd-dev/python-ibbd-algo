@@ -50,9 +50,23 @@ class Optics:
             self.matrix = matrix
 
     def distance(self, p1, p2):
-        if self.matrix is not None:
-            return self.matrix[p1.index, p2.index]
-        return self.distance_func(p1.data, p2.data)
+        return self.matrix[p1.index, p2.index]
+        # if self.matrix is not None:
+        #     return self.matrix[p1.index, p2.index]
+        # return self.distance_func(p1.data, p2.data)
+
+    def create_matrix(self, points):
+        """生成距离矩阵"""
+        n = len(points)
+        matrix = np.full((n, n), 0.0)
+        for i in range(n-1):
+            p1 = points[i]
+            for j in range(i, n):
+                p2 = points[j]
+                d = self.distance_func(p1.data, p2.data)
+                matrix[i, j], matrix[j, i] = d, d
+
+        self.matrix = matrix
 
     def _core_distance(self, point, neighbors):
         # distance from a point to its nth neighbor (n = min_cluser_size)
@@ -92,6 +106,8 @@ class Optics:
 
     def fit(self, points):
         self.points = [Point(i, row) for i, row in enumerate(points)]
+        if self.matrix is None:
+            self.create_matrix(self.points)    # 生成距离矩阵
 
         # 待处理队列
         self.unprocessed = [p for p in self.points]
@@ -154,7 +170,6 @@ class Optics:
 
 
 if __name__ == "__main__":
-    # LOAD SOME POINTS
     points = [
         np.array((1, 1)),
         np.array((1, 3)),
@@ -167,9 +182,7 @@ if __name__ == "__main__":
     optics = Optics(4, 2)
     optics.fit(points)
     labels = optics.cluster(2)
-    """
-    输出：[0 0 0 1 1]
-    """
+    print("正常应该输出：[0 0 0 1 1]")
     print(labels)
     assert max(labels) == 1 and min(labels) == 0
 
