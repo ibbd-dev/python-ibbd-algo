@@ -58,10 +58,10 @@ class Match:
         idx1, idx2 = set(items[:, 0]), set(items[:, 1])
         for idx in range(len(self.seq1)):
             if idx not in idx1:
-                items = np.append(items, [[idx, None]])
+                items = np.append(items, [[idx, None]], axis=0)
         for idx in range(len(self.seq2)):
             if idx not in idx2:
-                items = np.append(items, [[None, idx]])
+                items = np.append(items, [[None, idx]], axis=0)
 
         return items
 
@@ -91,8 +91,11 @@ class Match:
 if __name__ == '__main__':
     seq1 = ['中国人民']
     seq2 = ['中国人民呀', '人民共和国']
-    res = Match(seq1, seq2).match()
+    match = Match(seq1, seq2)
+    res = match.match()
     assert res.tolist() == [[0, 0]]
+    res = match.fmt_items(res)
+    assert res.tolist() == [[0, 0], [None, 1]]
 
     seq1 = ['中国人民']
     seq2 = ['人民共和国', '中国人民呀']
