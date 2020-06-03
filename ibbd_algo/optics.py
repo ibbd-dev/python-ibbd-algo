@@ -177,6 +177,7 @@ if __name__ == "__main__":
         np.array((4, 6)),
         np.array((5, 7)),
     ]
+    print(points)
 
     # 使用欧氏距离
     optics = Optics(4, 2)
@@ -208,4 +209,25 @@ if __name__ == "__main__":
     optics = Optics(4, 2, matrix=matrix)
     optics.fit(points)
     labels = optics.cluster(2)
+    print(labels)
+
+    def distance(line1, line2):
+        """optics算法的距离函数"""
+        h1, y1 = line1
+        h2, y2 = line2
+        diffy = abs(y1-y2)
+        hmin, hmax = min(h1, h2), max(h1, h2)
+        if hmax > hmin*2 or diffy > hmin/2:
+            return Optics.inf
+        return (hmax-hmin)/hmin + diffy/hmin
+
+    points = [[35.61250305, 163.22396088],
+              [41.5479126, 293.8031311],
+              [80.00677072, 664.75743103],
+              [80.12811279, 796.8296814]]
+    points = [np.array(p) for p in points]
+    print(points)
+    optics = Optics(1.0, 1, distance=distance)
+    optics.fit(points)
+    labels = optics.cluster(0.5)
     print(labels)
