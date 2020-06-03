@@ -4,6 +4,7 @@
 Author: alex
 Created Time: 2020年06月03日 星期三 15时38分10秒
 '''
+import numpy as np
 from itertools import combinations
 from diff_match_patch import diff_match_patch
 
@@ -53,6 +54,17 @@ class Match:
 
         return items
 
+    def fmt_items(self, items):
+        idx1, idx2 = set(items[:, 0]), set(items[:, 1])
+        for idx in range(len(self.seq1)):
+            if idx not in idx1:
+                items = np.append(items, [[idx, None]])
+        for idx in range(len(self.seq2)):
+            if idx not in idx2:
+                items = np.append(items, [[None, idx]])
+
+        return items
+
     def match_num(self, num):
         """从seq1中提取num个元素进行匹配"""
         max_score = 0
@@ -67,7 +79,7 @@ class Match:
                     comb_match = (comb_i, comb_j)
 
         # 生成配对items
-        items = [(i, j) for i, j in zip(comb_match[0], comb_match[1])]
+        items = np.array((comb_match[0], comb_match[1])).T
         return max_score, items
 
     def cal_comb_score(self, comb_i, comb_j):
@@ -79,30 +91,25 @@ class Match:
 if __name__ == '__main__':
     seq1 = ['中国人民']
     seq2 = ['中国人民呀', '人民共和国']
-    match = Match(seq1, seq2)
-    res = match.match()
-    assert res == [(0, 0)]
+    res = Match(seq1, seq2).match()
+    assert res.tolist() == [[0, 0]]
 
     seq1 = ['中国人民']
     seq2 = ['人民共和国', '中国人民呀']
-    match = Match(seq1, seq2)
-    res = match.match()
-    assert res == [(0, 1)]
+    res = Match(seq1, seq2).match()
+    assert res.tolist() == [[0, 1]]
 
     seq2 = ['中国人民']
     seq1 = ['人民共和国', '中国人民呀']
-    match = Match(seq1, seq2)
-    res = match.match()
-    assert res == [(1, 0)]
+    res = Match(seq1, seq2).match()
+    assert res.tolist() == [[1, 0]]
 
     seq1 = ['中国人民', '广东省广州市']
     seq2 = ['人民共和国', '中国人民呀', '广东广州天河']
-    match = Match(seq1, seq2)
-    res = match.match()
-    assert res == [(0, 1), (1, 2)]
+    res = Match(seq1, seq2).match()
+    assert res.tolist() == [[0, 1], [1, 2]]
 
     seq1 = ['中国人民', '广东省广州市']
     seq2 = ['中国人民呀', '人民共和国', '广东广州天河']
-    match = Match(seq1, seq2)
-    res = match.match()
-    assert res == [(0, 0), (1, 2)]
+    res = Match(seq1, seq2).match()
+    assert res.tolist() == [[0, 0], [1, 2]]
