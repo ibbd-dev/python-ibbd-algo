@@ -55,7 +55,9 @@ class Match:
         return items
 
     def fmt_items(self, items):
-        """格式化items，并排序好"""
+        """格式化items，并排序好
+        :return items list 如果没有对应的则对应值为-1
+        """
         idx1, idx2 = set(items[:, 0]), set(items[:, 1])
         for idx in range(len(self.seq1)):
             if idx not in idx1:
