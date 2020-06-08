@@ -58,10 +58,10 @@ class Match:
         idx1, idx2 = set(items[:, 0]), set(items[:, 1])
         for idx in range(len(self.seq1)):
             if idx not in idx1:
-                items = np.append(items, [[idx, None]], axis=0)
+                items = np.append(items, [[idx, -1]], axis=0)
         for idx in range(len(self.seq2)):
             if idx not in idx2:
-                items = np.append(items, [[None, idx]], axis=0)
+                items = np.append(items, [[-1, idx]], axis=0)
 
         return items
 
