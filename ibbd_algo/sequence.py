@@ -55,6 +55,7 @@ class Match:
         return items
 
     def fmt_items(self, items):
+        """格式化items，并排序好"""
         idx1, idx2 = set(items[:, 0]), set(items[:, 1])
         for idx in range(len(self.seq1)):
             if idx not in idx1:
@@ -63,7 +64,7 @@ class Match:
             if idx not in idx2:
                 items = np.append(items, [[-1, idx]], axis=0)
 
-        return items
+        return sorted(items)
 
     def match_num(self, num):
         """从seq1中提取num个元素进行匹配"""
