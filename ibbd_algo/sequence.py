@@ -44,7 +44,7 @@ class Match:
         :return items: list: [(idx1, idx2)]
         """
         max_score = 0
-        items = None
+        items = np.array([])
         max_num = min(len(self.seq1), len(self.seq2))
         for num in range(1, max_num+1):
             tmp_score, tmp_items = self.match_num(num)
@@ -59,8 +59,13 @@ class Match:
         :return items list 如果没有对应的则对应值为-1
         """
         new_items = []
-        idx1, idx2 = set(items[:, 0]), set(items[:, 1])
-        id_map = {id1: id2 for id1, id2 in items.tolist()}
+        if len(items) > 0:
+            idx1, idx2 = set(items[:, 0]), set(items[:, 1])
+            id_map = {id1: id2 for id1, id2 in items.tolist()}
+        else:
+            idx1, idx2 = set(), set()
+            id_map = dict()
+
         for idx in range(len(self.seq1)):
             if idx not in idx1:
                 new_items.append([idx, -1])
@@ -143,3 +148,19 @@ if __name__ == '__main__':
     assert res.tolist() == [[0, 0], [1, 2]]
     res = match.fmt_items(res)
     assert res == [[0, 0], [-1, 1], [1, 2]]
+
+    seq1 = ['中国人民', '广东省广州市']
+    seq2 = []
+    match = Match(seq1, seq2)
+    res = match.match()
+    assert res.tolist() == []
+    res = match.fmt_items(res)
+    assert res == [[0, -1], [1, -1]]
+
+    seq1 = []
+    seq2 = ['中国人民', '广东省广州市']
+    match = Match(seq1, seq2)
+    res = match.match()
+    assert res.tolist() == []
+    res = match.fmt_items(res)
+    assert res == [[-1, 0], [-1, 1]]
