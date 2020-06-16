@@ -55,18 +55,35 @@ class Match:
         return items
 
     def fmt_items(self, items):
-        """格式化items，并排序好
+        """格式化items，并排序好，注意排序的时候应该保持顺序
         :return items list 如果没有对应的则对应值为-1
         """
+        new_items = []
         idx1, idx2 = set(items[:, 0]), set(items[:, 1])
+        id_map = {id1: id2 for id1, id2 in items.tolist()}
         for idx in range(len(self.seq1)):
             if idx not in idx1:
-                items = np.append(items, [[idx, -1]], axis=0)
+                new_items.append([idx, -1])
+            else:
+                new_items.append([idx, id_map[idx]])
+
         for idx in range(len(self.seq2)):
             if idx not in idx2:
-                items = np.append(items, [[-1, idx]], axis=0)
+                new_items = self.insert_item(new_items, [-1, idx])
 
-        return sorted(items.tolist())
+        return new_items
+
+    def insert_item(self, items, item):
+        """插入一个item"""
+        if item[1] == 0:
+            items.insert(0, item)
+            return items
+        for idx, (_, val) in enumerate(items):
+            if val == item[1]-1:
+                items.insert(idx+1, item)
+                break
+
+        return items
 
     def match_num(self, num):
         """从seq1中提取num个元素进行匹配"""
@@ -98,7 +115,7 @@ if __name__ == '__main__':
     res = match.match()
     assert res.tolist() == [[0, 0]]
     res = match.fmt_items(res)
-    assert res == [[-1, 1], [0, 0]]
+    assert res == [[0, 0], [-1, 1]]
 
     seq1 = ['中国人民']
     seq2 = ['人民共和国', '中国人民呀']
@@ -113,9 +130,16 @@ if __name__ == '__main__':
     seq1 = ['中国人民', '广东省广州市']
     seq2 = ['人民共和国', '中国人民呀', '广东广州天河']
     res = Match(seq1, seq2).match()
+    match = Match(seq1, seq2)
+    res = match.match()
     assert res.tolist() == [[0, 1], [1, 2]]
+    res = match.fmt_items(res)
+    assert res == [[-1, 0], [0, 1], [1, 2]]
 
     seq1 = ['中国人民', '广东省广州市']
     seq2 = ['中国人民呀', '人民共和国', '广东广州天河']
-    res = Match(seq1, seq2).match()
+    match = Match(seq1, seq2)
+    res = match.match()
     assert res.tolist() == [[0, 0], [1, 2]]
+    res = match.fmt_items(res)
+    assert res == [[0, 0], [-1, 1], [1, 2]]
