@@ -66,7 +66,7 @@ class Match:
             if idx not in idx2:
                 items = np.append(items, [[-1, idx]], axis=0)
 
-        return sorted(items)
+        return sorted(items.tolist())
 
     def match_num(self, num):
         """从seq1中提取num个元素进行匹配"""
@@ -98,7 +98,7 @@ if __name__ == '__main__':
     res = match.match()
     assert res.tolist() == [[0, 0]]
     res = match.fmt_items(res)
-    assert res.tolist() == [[0, 0], [None, 1]]
+    assert res == [[-1, 1], [0, 0]]
 
     seq1 = ['中国人民']
     seq2 = ['人民共和国', '中国人民呀']
