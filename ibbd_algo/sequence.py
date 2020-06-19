@@ -15,11 +15,12 @@ def text_score(text1, text2):
     diffs = dmp.diff_main(text1, text2)
     dmp.diff_cleanupSemanticLossless(diffs)
     same_len = 0
+    # 计算字节数是为了增加中文的权重
     for tag, text in diffs:
         if tag == 0:
-            same_len += len(text)
+            same_len += len(text.encode())
 
-    return 2*same_len / (len(text1)+len(text2))
+    return 2*same_len / (len(text1.encode())+len(text2.encode()))
 
 
 class Match:
