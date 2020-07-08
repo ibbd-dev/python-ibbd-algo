@@ -92,7 +92,8 @@ class Match:
                 b -= point_n
                 data.append([a, b])
                 continue
-            data += self.parse_nodes(nodes, edges)
+            tmp_edges = self.parse_edges(edges, nodes)
+            data += [[i, j-point_n] for i, j in tmp_edges]
 
         # 重排序
         data = sorted(data)
@@ -101,9 +102,9 @@ class Match:
         # TODO 处理掉不符合顺序的关系
         return data
 
-    def parse_nodes(self, nodes, edges):
-        """处理顶点"""
-        edges = [edge for edge in edges if edge[0] in nodes]
+    def parse_edges(self, edges, nodes):
+        """处理特定顶点的边"""
+        edges = [(i, j) for i, j in edges if i in nodes]
         print(edges)
         return []
 
@@ -263,5 +264,5 @@ if __name__ == '__main__':
             '规管理、客户权益等方面尤为重要。业务合同通常条款详细,包括文字,表格,', '盖章等的识别和比对,且多为制式合同,为提高合同签署效率,防止合同被另一', '方恶意修改,或者合同被伪造等,需要对合同的全部文字条款做内容确认,合同', '文本审核的工作量非常大', '图2-1文本识别比对需求', '2.传统的人工审核方式不仅效率低下,且容易受审核人员业务素养、体力、精', '神状态等因素的影响,一旦审核出现疏漏差错,损失将是巨大的.', '这里是新增的一行', '2']
     print(len(seq1), len(seq2))
     match = Match(seq1, seq2)
-    res = match.match(min_score=0.45)
+    res = match.match(min_score=0.55)
     print(res)
