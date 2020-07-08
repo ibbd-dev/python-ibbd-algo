@@ -184,3 +184,7 @@ if __name__ == '__main__':
     assert res.tolist() == [[0, 0], [2, 2]]
     res = match.fmt_items(res)
     assert res == [[0, 0], [-1, 1], [1, -1], [2, 2]]
+
+    match = Match(seq1, seq2)
+    res = match.match(min_score=0.6)
+    print(res)
