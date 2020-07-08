@@ -162,7 +162,7 @@ class Match:
         print('match num: ', num)
         max_score = 0
         comb_match = None
-        comb1 = list(combinations(range(len(self.seq1)), num))
+        comb1 = combinations(range(len(self.seq1)), num)
         comb2 = list(combinations(range(len(self.seq2)), num))
         for comb_i in comb1:
             for comb_j in comb2:
@@ -182,10 +182,11 @@ class Match:
 
     def cal_comb_score(self, comb_i, comb_j):
         """计算集合得分"""
-        scores = [self.scores[i, j] for i, j in zip(comb_i, comb_j)]
-        if self.min_score is not None and min(scores) < self.min_score:
+        where = (np.array(comb_i, dtype=int), np.array(comb_j, dtype=int))
+        scores = self.scores[where]
+        if self.min_score is not None and np.min(scores) < self.min_score:
             return None
-        return sum(scores)
+        return np.sum(scores)
 
 
 if __name__ == '__main__':
