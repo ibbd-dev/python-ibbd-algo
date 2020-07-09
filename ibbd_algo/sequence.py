@@ -40,7 +40,7 @@ def connected_components(edges):
 
 
 class Match:
-    len_thr = 8    # 长度阈值
+    """序列匹配"""
 
     def __init__(self, seq1, seq2, score_func=text_score):
         """两个序列的匹配
@@ -57,15 +57,17 @@ class Match:
         self.seq1 = seq1
         self.seq2 = seq2
 
-    def match(self, min_score=None):
+    def match(self, min_score=None, force_comb=False, len_thr=8):
         """找到最优的匹配
         注意：匹配得到的顺序不能改变
-        :param min_score 允许匹配的最小得分，如果为None则不做判断
-        :return items: list: [(idx1, idx2)]
+        :param min_score: None|float: 允许匹配的最小得分，如果为None则不做判断
+        :param force_comb: bool: 强制使用组合算法，注意如果队列元素比较多可能会很慢
+        :param len_thr: int: 序列长度超过该值时，则不会使用组合算法，除非强制指定
+        :return items: numpy.ndarray: [(idx1, idx2)]
         """
         self.min_score = min_score
-        if all([len(self.seq1) < self.len_thr,
-                len(self.seq2) < self.len_thr]):
+        if all([len(self.seq1) < len_thr,
+                len(self.seq2) < len_thr]) or force_comb:
             return self.less_match()
 
         # 当数据比较大时
@@ -75,8 +77,18 @@ class Match:
     def more_match(self):
         """当数据比较多时，使用该算法"""
         where_i, where_j = np.where(self.scores > self.min_score)
-        print(where_i)
-        print(where_j)
+        len_j = len(where_j)
+        if len_j == 0:
+            return np.array([])
+        if len_j == 1:
+            return np.array([(where_i[0], where_j[0])])
+
+        # 优化得分
+        for j, val_j in enumerate(where_j):
+            err_num = np.count_nonzero(where_j[:j] > val_j)
+            err_num += np.count_nonzero(where_j[j:] < val_j)
+            # print('j: %d  => %d' % (j, err_num))
+            self.scores[where_i[j], val_j] *= (len_j-err_num)/(len_j)
 
         # 找到相连的边
         point_n = max(len(self.seq1), len(self.seq2))
@@ -86,27 +98,100 @@ class Match:
         for nodes in conn_nodes:
             if len(nodes) == 2:
                 # 只有一个关系
-                a, b = list(nodes)
-                if a > b:
-                    a, b = b, a
-                b -= point_n
-                data.append([a, b])
+                a, b = min(nodes), max(nodes)
+                data.append((a, b-point_n))
                 continue
-            tmp_edges = self.parse_edges(edges, nodes)
-            data += [[i, j-point_n] for i, j in tmp_edges]
+            data += self.parse_edges(edges, nodes, point_n)
 
         # 重排序
-        data = sorted(data)
-        print(data)
+        data = sorted(data, key=lambda x: (x[0], x[1]))
+        data = np.array(data)
+        if data.shape[0] < 2:
+            return data
 
-        # TODO 处理掉不符合顺序的关系
+        # 处理掉不符合顺序的关系
+        # print(data[:, 0])
+        # print(data[:, 1])
+        del_ids = self.cal_del_ids(data[:, 1])    # 需要删除的
+        if len(del_ids) > 0:
+            all_ids = np.array([i for i in range(data.shape[0])
+                                if i not in set(del_ids)], dtype=int)
+            # TODO 直接删除可能未必是最好的方式
+            data = data[all_ids]
+
         return data
 
-    def parse_edges(self, edges, nodes):
+    def cal_del_ids(self, data):
+        """计算需要删除的id"""
+        del_ids = []    # 需要删除的
+        for j in range(len(data)-1):
+            if data[j] < data[j+1]:
+                continue     # 这是正常的
+            # 保留j的损失
+            loss_right = self.cal_loss_right(data[j+1:], data[j])
+            # 保留j+1的损失
+            loss_left = self.cal_loss_left(data[:j+1], data[j+1])
+            # print('loss: ', loss_left, loss_right)
+            if loss_right > loss_left:    # 右边损失比较大, 保留j+1
+                del_ids += list(range(j-loss_left+1, j+1))
+            else:      # 保留j
+                del_ids += list(range(j+1, j+1+loss_right))
+
+        # print('del: ', del_ids)
+        # TODO 这里可能需要改进
+        return del_ids
+
+    def cal_loss_right(self, data, val):
+        """计算右边损失"""
+        loss = 0
+        for i in data:
+            if val > i:
+                loss += 1
+                continue
+            break
+        return loss
+
+    def cal_loss_left(self, data, val):
+        """计算左边损失"""
+        loss = 0
+        # print(data)
+        for i in data[::-1]:
+            if val < i:
+                loss += 1
+                continue
+            break
+        return loss
+
+    def parse_edges(self, edges, nodes, j_diff):
         """处理特定顶点的边"""
-        edges = [(i, j) for i, j in edges if i in nodes]
-        print(edges)
-        return []
+        edges = [(i, j-j_diff) for i, j in edges if i in nodes]
+        # print("==> ", edges)
+        self.max_score = 0
+        self.max_edges = []
+        self.create_set(edges, [], 0, 0, set(), set())
+        # print('max edges: ', self.max_edges)
+        return self.max_edges
+
+    def create_set(self, all_edges, edges, score, pos, set_i, set_j):
+        """创建满足条件的集合"""
+        for curr_pos in range(pos, len(all_edges)):
+            i, j = all_edges[curr_pos]
+            if len(set_i) > 0 and (i <= max(set_i) or j <= max(set_j)):
+                # 不满足条件，直接进入下个元素
+                continue
+
+            t_edges = edges.copy()
+            t_set_i, t_set_j = set_i.copy(), set_j.copy()
+            t_edges.append((i, j))
+            t_score = score + self.scores[(i, j)]
+            t_set_i.add(i)
+            t_set_j.add(j)
+            self.create_set(all_edges, t_edges, t_score,
+                            curr_pos+1, t_set_i, t_set_j)
+            if t_score > self.max_score:
+                # print('--> ', t_score, self.max_score)
+                self.max_score = t_score
+                self.max_edges = t_edges
 
     def less_match(self):
         """当数据比较小时，可以使用穷举匹配"""
@@ -159,7 +244,7 @@ class Match:
 
     def match_num(self, num):
         """从seq1中提取num个元素进行匹配"""
-        print('match num: ', num)
+        # print('match num: ', num)
         max_score = 0
         comb_match = None
         comb1 = combinations(range(len(self.seq1)), num)
@@ -176,7 +261,7 @@ class Match:
         # 生成配对items
         if comb_match is None:
             return 0, []
-        print(comb_match)
+        # print(comb_match)
         items = np.array((comb_match[0], comb_match[1])).T
         return max_score, items
 
@@ -257,13 +342,19 @@ if __name__ == '__main__':
             '解决方案', '1.引言']
     match = Match(seq1, seq2)
     res = match.match(min_score=0.55)
-    print(res)
+    assert res.shape == (4, 2)
 
-    seq1 = ['迪奥科技有限公司', '1.引言', '1.1.编写目的', '明确迪奥科技电子档案质检系统五期(合同比对)的功能范围、功能模块细', '节、系统处理流程,为项目设计人员提供进一步设计依据、为项目开发人员提供', '开发依据、为测试人员提供测试依据、为客户的项目验收提供验收依据', '1.2.目标与背景', '1.2.1.项目背景', '1.合同是防范法律风险的必要程序,尤其在金融行业,合同在风险防控、合', '规管理、客户权益等方面尤为重要。业务合同通常条款详细,且多为制式合同',
-            '为提高合同签署效率,防止合同被另一方恶意修改,或者合同被伪造等,需要对', '合同的全部文字条款做内容确认,合同文本审核的工作量非常大。', '2-1文本识别比对需求', '2.传统的人工审核方式不仅效率低下,且容易受审核人员业务素养、体力', '精神状态等因素的影响,一旦审核出现疏漏差错,损失将是巨大的', '目前迪奥科技虽然采用了合同添加水印和二维码等方式进行版本控制,但仍存在', '2']
+    seq1 = ['2', '迪奥科技有限公司', '1.引言', '1.1.编写目的', '明确迪奥科技电子档案质检系统五期(合同比对)的功能范围、功能模块细', '节、系统处理流程,为项目设计人员提供进一步设计依据、为项目开发人员提供', '开发依据、为测试人员提供测试依据、为客户的项目验收提供验收依据', '1.2.目标与背景', '1.2.1.项目背景', '1.合同是防范法律风险的必要程序,尤其在金融行业,合同在风险防控、合', '规管理、客户权益等方面尤为重要。业务合同通常条款详细,且多为制式合同',
+            '为提高合同签署效率,防止合同被另一方恶意修改,或者合同被伪造等,需要对', '合同的全部文字条款做内容确认,合同文本审核的工作量非常大。', '2-1文本识别比对需求', '2.传统的人工审核方式不仅效率低下,且容易受审核人员业务素养、体力', '2', '精神状态等因素的影响,一旦审核出现疏漏差错,损失将是巨大的', '目前迪奥科技虽然采用了合同添加水印和二维码等方式进行版本控制,但仍存在', '2']
     seq2 = ['迪奥科技有限公司', '1.1.编写目的', '明确迪奥科技电子档案质检系统六期的功能范围、功能模块细节、系统处理', '流程,为项目设计人员提供进一步设计依据、为项目开发人员提供开发依据、为', '测试人员提供测试依据、为客户的项目验收提供验收依据.', '1.2.目标与背景', '1.2.1.项目背景', '1.合同是防范法律风险的必要程序,尤其在金融行业,合同在风险防控、合',
             '规管理、客户权益等方面尤为重要。业务合同通常条款详细,包括文字,表格,', '盖章等的识别和比对,且多为制式合同,为提高合同签署效率,防止合同被另一', '方恶意修改,或者合同被伪造等,需要对合同的全部文字条款做内容确认,合同', '文本审核的工作量非常大', '图2-1文本识别比对需求', '2.传统的人工审核方式不仅效率低下,且容易受审核人员业务素养、体力、精', '神状态等因素的影响,一旦审核出现疏漏差错,损失将是巨大的.', '这里是新增的一行', '2']
-    print(len(seq1), len(seq2))
     match = Match(seq1, seq2)
-    res = match.match(min_score=0.55)
-    print(res)
+    res = match.match(min_score=0.65)
+    for pos in range(len(res)):
+        i, j = res[pos]
+        print('-> ', i, j)
+        print('  ', seq1[i])
+        print('  ', seq2[j])
+        if pos < len(res)-1:
+            assert res[pos, 0] < res[pos+1, 0]
+            assert res[pos, 1] < res[pos+1, 1]
