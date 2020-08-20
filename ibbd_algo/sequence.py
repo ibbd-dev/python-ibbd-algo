@@ -13,6 +13,8 @@ from diff_match_patch import diff_match_patch
 
 def text_score(text1, text2):
     """计算两个文本的匹配得分"""
+    if len(text1) == 0 and len(text2) == 0:
+        return 1.0      # TODO
     dmp = diff_match_patch()
     diffs = dmp.diff_main(text1, text2)
     dmp.diff_cleanupSemanticLossless(diffs)
