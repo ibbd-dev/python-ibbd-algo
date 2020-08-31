@@ -4,15 +4,26 @@
 Author: alex
 Created Time: 2020年06月03日 星期三 15时38分10秒
 '''
-from collections import Counter
 import numpy as np
-from itertools import combinations
 import networkx as nx
+from collections import Counter
+from itertools import combinations
+from fuzzywuzzy import fuzz
 from diff_match_patch import diff_match_patch
+from utils import conc_map
 
 
 def text_score(text1, text2):
     """计算两个文本的匹配得分"""
+    return fuzz.ratio(text1, text2) / 100
+
+
+def text_score_dmp(text1, text2):
+    """计算两个文本的匹配得分
+    注意：这个算法会比text_score慢很多
+    """
+    if len(text1) == 0 and len(text2) == 0:
+        return 1.0      # TODO
     dmp = diff_match_patch()
     diffs = dmp.diff_main(text1, text2)
     dmp.diff_cleanupSemanticLossless(diffs)
@@ -42,16 +53,17 @@ def connected_components(edges):
 class Match:
     """序列匹配"""
 
-    def __init__(self, seq1, seq2, score_func=text_score):
+    def __init__(self, seq1, seq2, score_func=text_score, max_workers=None):
         """两个序列的匹配
         :param seq1, seq2: list: 两个列表序列
         :param score_func: function(item1, item2): 得分函数，参数item1是seq1的元素，item2是seq2中的元素
+        :param max_workers int|None: 并发的最大进程数量
         """
         # 计算得分
         scores = np.zeros((len(seq1), len(seq2)))
         for i, s1 in enumerate(seq1):
-            for j, s2 in enumerate(seq2):
-                scores[i, j] = score_func(s1, s2)
+            scores[i] = conc_map(lambda j: score_func(s1, seq2[j]),
+                                 range(len(seq2)), max_workers=max_workers)
 
         self.scores = scores
         self.seq1 = seq1
