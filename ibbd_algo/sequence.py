@@ -10,7 +10,7 @@ from collections import Counter
 from itertools import combinations
 from fuzzywuzzy import fuzz
 from diff_match_patch import diff_match_patch
-from utils import conc_map
+from ibbd_algo.utils import conc_map
 
 
 def text_score(text1, text2):
