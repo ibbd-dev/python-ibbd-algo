@@ -53,17 +53,28 @@ def connected_components(edges):
 class Match:
     """序列匹配"""
 
-    def __init__(self, seq1, seq2, score_func=text_score, max_workers=None):
+    def __init__(self, seq1, seq2, score_func=text_score, max_workers=None, window=5):
         """两个序列的匹配
         :param seq1, seq2: list: 两个列表序列
         :param score_func: function(item1, item2): 得分函数，参数item1是seq1的元素，item2是seq2中的元素
         :param max_workers int|None: 并发的最大进程数量
+        :param window int: 前后探索的窗口大小，窗口越大计算量越大。这个参数假设当前元素只和另一个序列的对应元素的前后若干个元素相关
         """
         # 计算得分
-        scores = np.zeros((len(seq1), len(seq2)))
+        len1, len2 = len(seq1), len(seq2)
+        # 计算窗口的开始和结束位置
+        start, end = -window, window
+        if len2 >= len1:
+            end += len2 - len1
+        else:
+            start += len2 - len1
+
+        scores = np.zeros((len1, len2))
         for i, s1 in enumerate(seq1):
-            scores[i] = conc_map(lambda j: score_func(s1, seq2[j]),
-                                 range(len(seq2)), max_workers=max_workers)
+            w_start, w_end = max(0, i+start), min(len2, i+end)
+            scores[i][w_start:w_end] = conc_map(lambda j: score_func(s1, seq2[j]),
+                                 range(w_start, w_end), 
+                                 max_workers=max_workers)
 
         self.scores = scores
         self.seq1 = seq1
@@ -210,11 +221,15 @@ class Match:
         max_score = 0
         items = np.array([])
         max_num = min(len(self.seq1), len(self.seq2))
-        for num in range(1, max_num+1):
+        for num in range(max_num, 0, -1):
             tmp_score, tmp_items = self.match_num(num)
-            if tmp_score > max_score:
+            if tmp_score >= max_score:
+                # 两个空元素配对在一起，去掉之后得分不会改变，但是空元素不应该配对在一起
                 items = tmp_items
                 max_score = tmp_score
+            else:
+                # 如果不能产生更好的值，则退出
+                break
 
         return items
 
