@@ -3,6 +3,7 @@
 
 Author: alex
 Created Time: 2020年06月03日 星期三 15时38分10秒
+介绍文章：https://mp.weixin.qq.com/s?__biz=MzU3NDQ3MjI3Nw==&mid=2247484696&idx=1&sn=d8dc0d415a2f1eda30a324a6aefcf98b&chksm=fd30ac22ca472534e26ce7e4344db260c3a9c9ba7d9f6798581bdb3554aec094c4321a7b805d&token=521718035&lang=zh_CN#rd
 '''
 import numpy as np
 import networkx as nx
@@ -71,6 +72,7 @@ class Match:
 
         scores = np.zeros((len1, len2))
         for i, s1 in enumerate(seq1):
+            # 一个元素通常只会和另一个序列中相邻的元素产生联系
             w_start, w_end = max(0, i+start), min(len2, i+end)
             scores[i][w_start:w_end] = conc_map(lambda j: score_func(s1, seq2[j]),
                                  range(w_start, w_end), 
@@ -99,6 +101,7 @@ class Match:
 
     def more_match(self):
         """当数据比较多时，使用该算法"""
+        # 剪枝：其值却很小的边通常是没有意义的
         where_i, where_j = np.where(self.scores > self.min_score)
         len_j = len(where_j)
         if len_j == 0:
@@ -106,11 +109,12 @@ class Match:
         if len_j == 1:
             return np.array([(where_i[0], where_j[0])])
 
-        # 优化得分
+        # 优化得分: 将位置影响整合到边的权重上
         for j, val_j in enumerate(where_j):
+            # 正常来说，where_j是按顺序排序的
+            # 如果前面有比当前值大，或者后面有比当前值小，这两种情况都是不常见的，可以减少其权重
             err_num = np.count_nonzero(where_j[:j] > val_j)
             err_num += np.count_nonzero(where_j[j:] < val_j)
-            # print('j: %d  => %d' % (j, err_num))
             self.scores[where_i[j], val_j] *= (len_j-err_num)/(len_j)
 
         # 找到相连的边
@@ -270,14 +274,16 @@ class Match:
         return items
 
     def match_num(self, num):
-        """从seq1中提取num个元素进行匹配"""
+        """从两个序列中分别提取num个元素进行匹配"""
         # print('match num: ', num)
         max_score = 0
         comb_match = None
+        # 提取两个序列的下标子集合
         comb1 = combinations(range(len(self.seq1)), num)
         comb2 = list(combinations(range(len(self.seq2)), num))
         for comb_i in comb1:
             for comb_j in comb2:
+                # 计算这两个集合的得分
                 tmp_score = self.cal_comb_score(comb_i, comb_j)
                 if tmp_score is None:
                     continue
