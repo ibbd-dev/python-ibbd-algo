@@ -75,8 +75,8 @@ class Match:
             # 一个元素通常只会和另一个序列中相邻的元素产生联系
             w_start, w_end = max(0, i+start), min(len2, i+end)
             scores[i][w_start:w_end] = conc_map(lambda j: score_func(s1, seq2[j]),
-                                 range(w_start, w_end), 
-                                 max_workers=max_workers)
+                                                range(w_start, w_end),
+                                                max_workers=max_workers)
 
         self.scores = scores
         self.seq1 = seq1
@@ -227,7 +227,7 @@ class Match:
         max_num = min(len(self.seq1), len(self.seq2))
         for num in range(max_num, 0, -1):
             tmp_score, tmp_items = self.match_num(num)
-            if tmp_score >= max_score:
+            if tmp_score >= max_score and tmp_score > 0:
                 # 两个空元素配对在一起，去掉之后得分不会改变，但是空元素不应该配对在一起
                 items = tmp_items
                 max_score = tmp_score
@@ -293,7 +293,7 @@ class Match:
 
         # 生成配对items
         if comb_match is None:
-            return 0, []
+            return 0, np.array([])
         # print(comb_match)
         items = np.array((comb_match[0], comb_match[1])).T
         return max_score, items
