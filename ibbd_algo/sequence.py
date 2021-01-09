@@ -75,8 +75,8 @@ class Match:
             # 一个元素通常只会和另一个序列中相邻的元素产生联系
             w_start, w_end = max(0, i+start), min(len2, i+end)
             scores[i][w_start:w_end] = conc_map(lambda j: score_func(s1, seq2[j]),
-                                 range(w_start, w_end), 
-                                 max_workers=max_workers)
+                                                range(w_start, w_end),
+                                                max_workers=max_workers)
 
         self.scores = scores
         self.seq1 = seq1
