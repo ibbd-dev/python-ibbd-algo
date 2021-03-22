@@ -15,7 +15,9 @@ from ibbd_algo.utils import conc_map
 
 
 def text_score(text1, text2, min_text_len=2):
-    """计算两个文本的匹配得分"""
+    """计算两个文本的匹配得分
+    :param min_text_len int 该参数可以用于减少偶然匹配的情况，也可以提升一些速度。但是该参数过大也会导致问题
+    """
     if len(text1) < min_text_len and len(text2) < min_text_len:
         return 1.0      # TODO
     return fuzz.ratio(text1, text2) / 100
