@@ -14,16 +14,18 @@ from diff_match_patch import diff_match_patch
 from ibbd_algo.utils import conc_map
 
 
-def text_score(text1, text2):
+def text_score(text1, text2, min_text_len=2):
     """计算两个文本的匹配得分"""
+    if len(text1) < min_text_len and len(text2) < min_text_len:
+        return 1.0      # TODO
     return fuzz.ratio(text1, text2) / 100
 
 
-def text_score_dmp(text1, text2):
+def text_score_dmp(text1, text2, min_text_len=2):
     """计算两个文本的匹配得分
     注意：这个算法会比text_score慢很多
     """
-    if len(text1) == 0 and len(text2) == 0:
+    if len(text1) < min_text_len and len(text2) < min_text_len:
         return 1.0      # TODO
     dmp = diff_match_patch()
     diffs = dmp.diff_main(text1, text2)
