@@ -85,7 +85,7 @@ class Match:
         self.scores = scores
         # print(scores)
 
-    def match(self, min_score=0.2):
+    def match(self, min_score=0.2, debug=False):
         """快速配对算法
         :return items: numpy.ndarray: [(idx1, idx2)]
         """
@@ -98,8 +98,7 @@ class Match:
 
         # 每行最大值的索引
         max_index = np.argmax(scores, axis=1)
-        sort_index = np.sort(max_index)
-        eq_index = max_index == sort_index
+        eq_index = max_index == np.sort(max_index)
         len_index = len(max_index)
         if all(eq_index) and len_index == len(set(max_index)):
             # 顺序一致且每个值都不同
@@ -109,13 +108,20 @@ class Match:
             return np.array(data)
 
         # 顺序不一致或者存在相同的值
-        before, after = max_index[:len_index-1].copy(), max_index[1:].copy()
-        before, after = np.insert(before, 0, -1), np.insert(after, len_index-1, -1)
+        eq_index = np.zeros((len_index,), dtype=bool)
         for i in range(len_index):
-            if eq_index[i]:
-                continue
-            eq_index[i] = max_index[i] == before[i] or max_index[i] == after[i]
+            # 比前面的值都大，比后面的值都小
+            if i > 0:
+                if max(max_index[:i]) >= max_index[i]:
+                    eq_index[i] = True
+                    continue
+            if i < len_index-1:
+                if min(max_index[i+1:]) <= max_index[i]:
+                    eq_index[i] = True
 
+        if debug:
+            print(max_index)
+            print(eq_index)
         data = []
         is_true = False
         self.min_score = min_score
@@ -140,10 +146,12 @@ class Match:
             min_j = 0 if len(data) == 0 else data[-1][1]+1
             max_j = scores.shape[1] if i+true_len >= len_index else max_index[i+true_len]
             min_i, max_i = i, i+true_len
-            self.scores = scores[min_i:max_i, min_j:max_j]
+            self.scores = scores[min_i:max_i, min_j:max_j].copy()
+            if debug:
+                print("more match:", self.scores.shape, (min_i, max_i, min_j, max_j))
             tmp_data = self.more_match()
             for tmp_i, tmp_v in tmp_data:
-                data.append([tmp_i, tmp_v])
+                data.append([tmp_i+min_i, tmp_v+min_j])
 
         if is_T:
             data = [[v, i] for i, v in data]
@@ -456,6 +464,30 @@ if __name__ == '__main__':
         print('-> ', i, j)
         print('  ', seq1[i])
         print('  ', seq2[j])
-        if pos < len(res)-1:
-            assert res[pos, 0] < res[pos+1, 0]
-            assert res[pos, 1] < res[pos+1, 1]
+
+    seq1 = ["aa", "bb", "cc"]
+    seq2 = ["aa", "cc", "bc", "dd"]
+    match = Match(seq1, seq2)
+    res = match.match(min_score=0.1)
+    print(res)
+    assert res.shape == (2, 2)
+    assert res[0].tolist() == [0, 0]
+    assert res[1].tolist() == [2, 1]
+
+    seq1 = ["aa", "cc", "bc", "dd"]
+    seq2 = ["aa", "bb", "cc"]
+    match = Match(seq1, seq2)
+    res = match.match(min_score=0.1)
+    print(res)
+    assert res.shape == (2, 2)
+    assert res[0].tolist() == [0, 0]
+    assert res[1].tolist() == [1, 2]
+
+    seq1 = ["aa", "cc", "cc", "bd"]
+    seq2 = ["aa", "bb", "cc"]
+    match = Match(seq1, seq2)
+    res = match.match(min_score=0.1)
+    print(res)
+    assert res.shape == (2, 2)
+    assert res[0].tolist() == [0, 0]
+    assert res[1].tolist() == [1, 2]
