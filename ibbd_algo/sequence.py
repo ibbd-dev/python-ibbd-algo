@@ -85,7 +85,7 @@ class Match:
         self.scores = scores
         # print(scores)
 
-    def match(self, min_score=0.2, debug=False):
+    def match(self, min_score=0.2, sort_min_score=0.01, debug=False):
         """快速配对算法
         :return items: numpy.ndarray: [(idx1, idx2)]
         """
@@ -102,7 +102,7 @@ class Match:
         len_index = len(max_index)
         if all(eq_index) and len_index == len(set(max_index)):
             # 顺序一致且每个值都不同
-            data = [[i, v] for i, v in enumerate(max_index) if scores[i, v] >= min_score]
+            data = [[i, v] for i, v in enumerate(max_index) if scores[i, v] >= sort_min_score]
             if is_T:
                 data = [[v, i] for i, v in data]
             return np.array(data)
