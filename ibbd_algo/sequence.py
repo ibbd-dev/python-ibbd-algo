@@ -120,8 +120,8 @@ class Match:
                     eq_index[i] = True
 
         if debug:
-            print(max_index)
-            print(eq_index)
+            print(max_index, flush=True)
+            print(eq_index, flush=True)
         data = []
         is_true = False
         self.min_score = min_score
@@ -148,7 +148,7 @@ class Match:
             min_i, max_i = i, i+true_len
             self.scores = scores[min_i:max_i, min_j:max_j].copy()
             if debug:
-                print("more match:", self.scores.shape, (min_i, max_i, min_j, max_j))
+                print("more match:", self.scores.shape, (min_i, max_i, min_j, max_j), flush=True)
             tmp_data = self.more_match()
             for tmp_i, tmp_v in tmp_data:
                 data.append([tmp_i+min_i, tmp_v+min_j])
