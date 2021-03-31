@@ -83,10 +83,73 @@ class Match:
                                                 max_workers=max_workers)
 
         self.scores = scores
-        self.seq1 = seq1
-        self.seq2 = seq2
+        # print(scores)
 
-    def match(self, min_score=None, force_comb=False, len_thr=8):
+    def match(self, min_score=0.2):
+        """快速配对算法
+        :return items: numpy.ndarray: [(idx1, idx2)]
+        """
+        scores = self.scores
+        len1, len2 = scores.shape
+        is_T = False    # 是否转置
+        if len1 > len2:
+            is_T = True
+            scores = scores.T
+
+        # 每行最大值的索引
+        max_index = np.argmax(scores, axis=1)
+        sort_index = np.sort(max_index)
+        eq_index = max_index == sort_index
+        len_index = len(max_index)
+        if all(eq_index) and len_index == len(set(max_index)):
+            # 顺序一致且每个值都不同
+            data = [[i, v] for i, v in enumerate(max_index) if scores[i, v] >= min_score]
+            if is_T:
+                data = [[v, i] for i, v in data]
+            return np.array(data)
+
+        # 顺序不一致或者存在相同的值
+        before, after = max_index[:len_index-1].copy(), max_index[1:].copy()
+        before, after = np.insert(before, 0, -1), np.insert(after, len_index-1, -1)
+        for i in range(len_index):
+            if eq_index[i]:
+                continue
+            eq_index[i] = max_index[i] == before[i] or max_index[i] == after[i]
+
+        data = []
+        is_true = False
+        self.min_score = min_score
+        for (i, v), flag in zip(enumerate(max_index), eq_index):
+            if not flag:
+                is_true = False
+                if scores[i, v] >= min_score:
+                    data.append([i, v])
+                if v == scores.shape[1]:     # 已经是最大的值
+                    break
+                continue
+            if is_true:
+                continue
+            # 找到连续的True块
+            is_true = True
+            true_len = 0
+            for j in range(i, len_index):
+                if eq_index[j]:
+                    true_len += 1
+
+            # 在小区域[min_i:max_i, min_j:max_j]内进行匹配
+            min_j = 0 if len(data) == 0 else data[-1][1]+1
+            max_j = scores.shape[1] if i+true_len >= len_index else max_index[i+true_len]
+            min_i, max_i = i, i+true_len
+            self.scores = scores[min_i:max_i, min_j:max_j]
+            tmp_data = self.more_match()
+            for tmp_i, tmp_v in tmp_data:
+                data.append([tmp_i, tmp_v])
+
+        if is_T:
+            data = [[v, i] for i, v in data]
+        return np.array(data)
+
+    def _match(self, min_score=None, force_comb=False, len_thr=8):
         """找到最优的匹配
         注意：匹配得到的顺序不能改变
         :param min_score: None|float: 允许匹配的最小得分，如果为None则不做判断
@@ -95,8 +158,8 @@ class Match:
         :return items: numpy.ndarray: [(idx1, idx2)]
         """
         self.min_score = min_score
-        if all([len(self.seq1) < len_thr,
-                len(self.seq2) < len_thr]) or force_comb:
+        if all([self.scores.shape[0] < len_thr,
+                self.scores.shape[1] < len_thr]) or force_comb:
             return self.less_match()
 
         # 当数据比较大时
@@ -122,7 +185,7 @@ class Match:
             self.scores[where_i[j], val_j] *= (len_j-err_num)/(len_j)
 
         # 找到相连的边
-        point_n = max(len(self.seq1), len(self.seq2))
+        point_n = max(self.scores.shape)
         edges = [(i, j+point_n) for i, j in zip(where_i, where_j)]
         conn_nodes = connected_components(edges)
         data = []          # 返回值
@@ -228,7 +291,7 @@ class Match:
         """当数据比较小时，可以使用穷举匹配"""
         max_score = 0
         items = np.array([])
-        max_num = min(len(self.seq1), len(self.seq2))
+        max_num = min(self.scores.shape)
         for num in range(max_num, 0, -1):
             tmp_score, tmp_items = self.match_num(num)
             if tmp_score >= max_score and tmp_score > 0:
@@ -253,13 +316,13 @@ class Match:
             idx1, idx2 = set(), set()
             id_map = dict()
 
-        for idx in range(len(self.seq1)):
+        for idx in range(self.scores.shape[0]):
             if idx not in idx1:
                 new_items.append([idx, -1])
             else:
                 new_items.append([idx, id_map[idx]])
 
-        for idx in range(len(self.seq2)):
+        for idx in range(self.scores.shape[1]):
             if idx not in idx2:
                 new_items = self.insert_item(new_items, [-1, idx])
 
@@ -283,8 +346,8 @@ class Match:
         max_score = 0
         comb_match = None
         # 提取两个序列的下标子集合
-        comb1 = combinations(range(len(self.seq1)), num)
-        comb2 = list(combinations(range(len(self.seq2)), num))
+        comb1 = combinations(range(self.scores.shape[0]), num)
+        comb2 = list(combinations(range(self.scores.shape[1]), num))
         for comb_i in comb1:
             for comb_j in comb2:
                 # 计算这两个集合的得分
@@ -369,6 +432,7 @@ if __name__ == '__main__':
     res = match.match()
     assert res.tolist() == [[0, 0], [1, 1], [2, 2]]
     res = match.match(min_score=0.5)
+    # print(res.tolist())
     assert res.tolist() == [[0, 0], [2, 2]]
     res = match.fmt_items(res)
     assert res == [[0, 0], [-1, 1], [1, -1], [2, 2]]
