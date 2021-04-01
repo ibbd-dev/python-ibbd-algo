@@ -100,7 +100,7 @@ class Match:
         is_T = False    # 是否转置
         if len1 > len2:
             is_T = True
-            scores = scores.T
+            scores = scores.T  # 转置之后，保证行数是比较少的
 
         # 每行最大值的索引
         max_index = np.argmax(scores, axis=1)
