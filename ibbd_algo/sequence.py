@@ -109,14 +109,15 @@ class Match:
 
         # 顺序不一致或者存在相同的值
         eq_index = np.zeros((len_index,), dtype=bool)
+        min_arr, max_arr = self.get_min_max(max_index)
         for i in range(len_index):
             # 比前面的值都大，比后面的值都小
             if i > 0:
-                if max(max_index[:i]) >= max_index[i]:
+                if max_index[i] <= max_arr[i-1]:
                     eq_index[i] = True
                     continue
             if i < len_index-1:
-                if min(max_index[i+1:]) <= max_index[i]:
+                if max_index[i] >= min_arr[i+1]:
                     eq_index[i] = True
 
         if debug:
@@ -156,6 +157,19 @@ class Match:
         if is_T:
             data = [[v, i] for i, v in data]
         return np.array(data)
+
+    def get_min_max(self, array):
+        """获取最小最大值列表"""
+        n = array.shape
+        # 后面的最小值，前面的最大值
+        min_arr, max_arr = np.zeros((n,), dtype=int), np.zeros((n,), dtype=int)
+        min_arr[n-1], max_arr[0] = array[n-1], array[0]
+        for i in range(1, n):
+            max_arr[i] = array[i] if array[i] >= max_arr[i-1] else max_arr[i-1]
+            j = n-i-1
+            min_arr[j] = array[j] if array[j] <= min_arr[j+1] else min_arr[j+1]
+
+        return min_arr, max_arr
 
     def _match(self, min_score=None, force_comb=False, len_thr=8):
         """找到最优的匹配
