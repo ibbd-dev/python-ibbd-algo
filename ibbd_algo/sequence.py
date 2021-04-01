@@ -162,7 +162,7 @@ class Match:
 
     def get_min_max(self, array):
         """获取最小最大值列表"""
-        n = array.shape
+        n = array.shape[0]
         # 后面的最小值，前面的最大值
         min_arr, max_arr = np.zeros((n,), dtype=int), np.zeros((n,), dtype=int)
         min_arr[n-1], max_arr[0] = array[n-1], array[0]
