@@ -108,6 +108,8 @@ class Match:
             return np.array(data)
 
         # 顺序不一致或者存在相同的值
+        if debug:
+            print("begin...", flush=True)
         eq_index = np.zeros((len_index,), dtype=bool)
         min_arr, max_arr = self.get_min_max(max_index)
         for i in range(len_index):
