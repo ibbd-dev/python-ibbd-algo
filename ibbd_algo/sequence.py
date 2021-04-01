@@ -94,9 +94,9 @@ class Match:
         scores = self.scores
         len1, len2 = scores.shape
         if len1 < 1 or len2 < 1:
-            return np.array()
+            return np.array([])
         if len1 == 1 and len2 == 1:
-            return np.array([0, 0])
+            return np.array([[0, 0]])
         is_T = False    # 是否转置
         if len1 > len2:
             is_T = True
