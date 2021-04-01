@@ -13,6 +13,8 @@ from fuzzywuzzy import fuzz
 from diff_match_patch import diff_match_patch
 from ibbd_algo.utils import conc_map
 
+debug = False
+
 
 def text_score(text1, text2, min_text_len=2):
     """计算两个文本的匹配得分
@@ -77,13 +79,13 @@ class Match:
         scores = np.zeros((len1, len2))
         for i, s1 in enumerate(seq1):
             # 一个元素通常只会和另一个序列中相邻的元素产生联系
-            w_start, w_end = max(0, i+start), min(len2, i+end)
+            w_start, w_end = max(0, i+start), min(len2, i+end+1)
             scores[i][w_start:w_end] = conc_map(lambda j: score_func(s1, seq2[j]),
                                                 range(w_start, w_end),
                                                 max_workers=max_workers)
 
         self.scores = scores
-        # print(scores)
+        # print(scores[:3, :3])
 
     def match(self, min_score=0.2, sort_min_score=0.01, debug=False):
         """快速配对算法
@@ -91,6 +93,10 @@ class Match:
         """
         scores = self.scores
         len1, len2 = scores.shape
+        if len1 < 1 or len2 < 1:
+            return np.array()
+        if len1 == 1 and len2 == 1:
+            return np.array([0, 0])
         is_T = False    # 是否转置
         if len1 > len2:
             is_T = True
@@ -108,23 +114,26 @@ class Match:
             return np.array(data)
 
         # 顺序不一致或者存在相同的值
+        if debug:
+            print("begin...", flush=True)
         eq_index = np.zeros((len_index,), dtype=bool)
+        min_arr, max_arr = self.get_min_max(max_index)
         for i in range(len_index):
             # 比前面的值都大，比后面的值都小
             if i > 0:
-                if max(max_index[:i]) >= max_index[i]:
+                if max_index[i] <= max_arr[i-1]:
                     eq_index[i] = True
                     continue
             if i < len_index-1:
-                if min(max_index[i+1:]) <= max_index[i]:
+                if max_index[i] >= min_arr[i+1]:
                     eq_index[i] = True
 
         if debug:
-            print(max_index)
-            print(eq_index)
+            print(max_index, flush=True)
+            print(eq_index, flush=True)
         data = []
         is_true = False
-        self.min_score = min_score
+        # self.min_score = min_score
         for (i, v), flag in zip(enumerate(max_index), eq_index):
             if not flag:
                 is_true = False
@@ -141,6 +150,8 @@ class Match:
             for j in range(i, len_index):
                 if eq_index[j]:
                     true_len += 1
+                else:
+                    break
 
             # 在小区域[min_i:max_i, min_j:max_j]内进行匹配
             min_j = 0 if len(data) == 0 else data[-1][1]+1
@@ -148,8 +159,13 @@ class Match:
             min_i, max_i = i, i+true_len
             self.scores = scores[min_i:max_i, min_j:max_j].copy()
             if debug:
-                print("more match:", self.scores.shape, (min_i, max_i, min_j, max_j))
-            tmp_data = self.more_match()
+                print("more match:", true_len, self.scores.shape, (min_i, max_i, min_j, max_j), flush=True)
+                print(self.scores, flush=True)
+            # tmp_data = self.more_match()
+            tmp_data = self.match_old(min_score=min_score)
+            if debug:
+                print("tmp data: ", tmp_data)
+
             for tmp_i, tmp_v in tmp_data:
                 data.append([tmp_i+min_i, tmp_v+min_j])
 
@@ -157,8 +173,21 @@ class Match:
             data = [[v, i] for i, v in data]
         return np.array(data)
 
-    def _match(self, min_score=None, force_comb=False, len_thr=8):
-        """找到最优的匹配
+    def get_min_max(self, array):
+        """获取最小最大值列表"""
+        n = array.shape[0]
+        # 后面的最小值，前面的最大值
+        min_arr, max_arr = np.zeros((n,), dtype=int), np.zeros((n,), dtype=int)
+        min_arr[n-1], max_arr[0] = array[n-1], array[0]
+        for i in range(1, n):
+            max_arr[i] = array[i] if array[i] >= max_arr[i-1] else max_arr[i-1]
+            j = n-i-1
+            min_arr[j] = array[j] if array[j] <= min_arr[j+1] else min_arr[j+1]
+
+        return min_arr, max_arr
+
+    def match_old(self, min_score=None, force_comb=False, len_thr=8):
+        """找到最优的匹配（旧版本）
         注意：匹配得到的顺序不能改变
         :param min_score: None|float: 允许匹配的最小得分，如果为None则不做判断
         :param force_comb: bool: 强制使用组合算法，注意如果队列元素比较多可能会很慢
@@ -302,13 +331,14 @@ class Match:
         max_num = min(self.scores.shape)
         for num in range(max_num, 0, -1):
             tmp_score, tmp_items = self.match_num(num)
+            # print("less match: ", num, tmp_score, tmp_items)
             if tmp_score >= max_score and tmp_score > 0:
                 # 两个空元素配对在一起，去掉之后得分不会改变，但是空元素不应该配对在一起
                 items = tmp_items
                 max_score = tmp_score
-            else:
+            # else:
                 # 如果不能产生更好的值，则退出
-                break
+                # break
 
         return items
 
@@ -440,10 +470,10 @@ if __name__ == '__main__':
     res = match.match()
     assert res.tolist() == [[0, 0], [1, 1], [2, 2]]
     res = match.match(min_score=0.5)
-    # print(res.tolist())
-    assert res.tolist() == [[0, 0], [2, 2]]
+    print(res.tolist())
+    assert res.tolist() == [[0, 0], [1, 1], [2, 2]]
     res = match.fmt_items(res)
-    assert res == [[0, 0], [-1, 1], [1, -1], [2, 2]]
+    assert res == [[0, 0], [1, 1], [2, 2]]
 
     seq1 = ['迪奥科技有限公司', '迪奥科技', '电子档案质检系统五期',
             '(暨合同内容比对)', '解决方案']
@@ -468,7 +498,7 @@ if __name__ == '__main__':
     seq1 = ["aa", "bb", "cc"]
     seq2 = ["aa", "cc", "bc", "dd"]
     match = Match(seq1, seq2)
-    res = match.match(min_score=0.1)
+    res = match.match(min_score=0.1, debug=True)
     print(res)
     assert res.shape == (2, 2)
     assert res[0].tolist() == [0, 0]
@@ -483,11 +513,23 @@ if __name__ == '__main__':
     assert res[0].tolist() == [0, 0]
     assert res[1].tolist() == [1, 2]
 
+    debug = True
+    seq1 = ["bb", "cc"]
+    seq2 = ["cc", "cc", "bd"]
+    match = Match(seq1, seq2)
+    match.min_score = 0.1
+    res = match.more_match()
+    print("res:", res)
+    res = match.match_old(min_score=0.1)
+    print("res:", res)
+    assert res.shape == (1, 2)
+    assert res[0].tolist() == [1, 1]
+
     seq1 = ["aa", "cc", "cc", "bd"]
     seq2 = ["aa", "bb", "cc"]
     match = Match(seq1, seq2)
-    res = match.match(min_score=0.1)
+    res = match.match(min_score=0.1, debug=True)
     print(res)
     assert res.shape == (2, 2)
     assert res[0].tolist() == [0, 0]
-    assert res[1].tolist() == [1, 2]
+    assert res[1].tolist() in ([1, 2], [2, 2])
