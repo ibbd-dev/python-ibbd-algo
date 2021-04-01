@@ -79,13 +79,13 @@ class Match:
         scores = np.zeros((len1, len2))
         for i, s1 in enumerate(seq1):
             # 一个元素通常只会和另一个序列中相邻的元素产生联系
-            w_start, w_end = max(0, i+start), min(len2, i+end)
+            w_start, w_end = max(0, i+start), min(len2, i+end+1)
             scores[i][w_start:w_end] = conc_map(lambda j: score_func(s1, seq2[j]),
                                                 range(w_start, w_end),
                                                 max_workers=max_workers)
 
         self.scores = scores
-        # print(scores)
+        # print(scores[:3, :3])
 
     def match(self, min_score=0.2, sort_min_score=0.01, debug=False):
         """快速配对算法
@@ -93,6 +93,10 @@ class Match:
         """
         scores = self.scores
         len1, len2 = scores.shape
+        if len1 < 1 or len2 < 1:
+            return np.array()
+        if len1 == 1 and len2 == 1:
+            return np.array([0, 0])
         is_T = False    # 是否转置
         if len1 > len2:
             is_T = True
