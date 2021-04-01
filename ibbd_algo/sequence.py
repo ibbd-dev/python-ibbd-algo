@@ -88,7 +88,7 @@ class Match:
         # print(scores[:3, :3])
 
     def match(self, min_score=0.2, sort_min_score=0.01, debug=False):
-        """快速配对算法
+        """快速配对算法（类似贪心算法）
         :return items: numpy.ndarray: [(idx1, idx2)]
         """
         scores = self.scores
