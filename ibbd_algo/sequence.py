@@ -88,7 +88,7 @@ class Match:
         # print(scores[:3, :3])
 
     def match(self, min_score=0.2, sort_min_score=0.01, debug=False):
-        """快速配对算法
+        """快速配对算法（类似贪心算法）
         :return items: numpy.ndarray: [(idx1, idx2)]
         """
         scores = self.scores
@@ -100,7 +100,7 @@ class Match:
         is_T = False    # 是否转置
         if len1 > len2:
             is_T = True
-            scores = scores.T
+            scores = scores.T  # 转置之后，保证行数是比较少的
 
         # 每行最大值的索引
         max_index = np.argmax(scores, axis=1)
@@ -343,6 +343,34 @@ class Match:
         return items
 
     def fmt_items(self, items):
+        """格式化配对的id对
+        :example
+            a = np.array([[1,2],[3,3]])
+            self.fmt_items(a)
+        """
+        new_items = []
+        src_last, dst_last = -1, -1
+        src_len, dst_len = self.scores.shape[:2]
+        for sid, did in items:
+            if sid - src_last > 1:
+                for tmp_id in range(src_last+1, sid):
+                    new_items.append([tmp_id, -1])
+            if did - dst_last > 1:
+                for tmp_id in range(dst_last+1, did):
+                    new_items.append([-1, tmp_id])
+
+            new_items.append([sid, did])
+            src_last, dst_last = sid, did
+        
+        # 补充尾页不匹配的情况
+        for tmp_id in range(src_last+1, src_len):
+            new_items.append([tmp_id, -1])
+        for tmp_id in range(dst_last+1, dst_len):
+            new_items.append([-1, tmp_id])
+
+        return new_items
+
+    def bak_fmt_items(self, items):
         """格式化items，并排序好，注意排序的时候应该保持顺序
         :return items list 如果没有对应的则对应值为-1
         """
