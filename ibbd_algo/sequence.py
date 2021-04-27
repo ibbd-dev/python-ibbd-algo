@@ -343,6 +343,34 @@ class Match:
         return items
 
     def fmt_items(self, items):
+        """格式化配对的id对
+        :example
+            a = np.array([[1,2],[3,3]])
+            self.fmt_items(a)
+        """
+        new_items = []
+        src_last, dst_last = -1, -1
+        src_len, dst_len = self.scores.shape[:2]
+        for sid, did in items:
+            if sid - src_last > 1:
+                for tmp_id in range(src_last+1, sid):
+                    new_items.append([tmp_id, -1])
+            if did - dst_last > 1:
+                for tmp_id in range(dst_last+1, did):
+                    new_items.append([-1, tmp_id])
+
+            new_items.append([sid, did])
+            src_last, dst_last = sid, did
+        
+        # 补充尾页不匹配的情况
+        for tmp_id in range(src_last+1, src_len):
+            new_items.append([tmp_id, -1])
+        for tmp_id in range(dst_last+1, dst_len):
+            new_items.append([-1, tmp_id])
+
+        return new_items
+
+    def bak_fmt_items(self, items):
         """格式化items，并排序好，注意排序的时候应该保持顺序
         :return items list 如果没有对应的则对应值为-1
         """
