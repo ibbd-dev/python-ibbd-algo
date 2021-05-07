@@ -134,6 +134,7 @@ class Match:
         data = []
         is_true = False
         # self.min_score = min_score
+        self.scores_ori = self.scores
         for (i, v), flag in zip(enumerate(max_index), eq_index):
             if not flag:
                 is_true = False
@@ -169,6 +170,8 @@ class Match:
             for tmp_i, tmp_v in tmp_data:
                 data.append([tmp_i+min_i, tmp_v+min_j])
 
+        self.scores = self.scores_ori    # 还原
+        self.scores_ori = None
         if is_T:
             data = [[v, i] for i, v in data]
         return np.array(data)
