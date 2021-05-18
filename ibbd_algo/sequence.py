@@ -201,7 +201,7 @@ class Match:
 
         return min_arr, max_arr
 
-    def match_old(self, min_score=None, force_comb=False, len_thr=8):
+    def match_old(self, min_score=None, force_comb=False, len_thr=6):
         """找到最优的匹配（旧版本）
         注意：匹配得到的顺序不能改变
         :param min_score: None|float: 允许匹配的最小得分，如果为None则不做判断

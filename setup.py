@@ -17,7 +17,7 @@ DEPENDENCIES = [
     'numpy',
 ]
 
-VERSION = '0.4.4'
+VERSION = '0.4.5'
 URL = 'https://github.com/ibbd-dev/python-ibbd-algo'
 
 setup(
