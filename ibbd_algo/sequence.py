@@ -166,7 +166,7 @@ class Match:
             self.scores = self.fmt_scores(scores[min_i:max_i, min_j:max_j].copy())
             if debug:
                 print("more match:", true_len, self.scores.shape, (min_i, max_i, min_j, max_j), flush=True)
-                print(self.scores, flush=True)
+                print(self.scores[:10, :10], flush=True)
 
             # tmp_data = self.more_match()
             tmp_data = self.match_old(min_score=min_score)
