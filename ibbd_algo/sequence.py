@@ -85,6 +85,7 @@ class Match:
                                                 max_workers=max_workers)
 
         self.scores = scores
+        self.window = window
         # print(scores[:3, :3])
 
     def match(self, min_score=0.2, sort_min_score=0.01, debug=False):
@@ -162,10 +163,11 @@ class Match:
             min_j = 0 if len(data) == 0 else data[-1][1]+1
             max_j = scores.shape[1] if i+true_len >= len_index else max_index[i+true_len]
             min_i, max_i = i, i+true_len
-            self.scores = scores[min_i:max_i, min_j:max_j].copy()
+            self.scores = self.fmt_scores(scores[min_i:max_i, min_j:max_j].copy())
             if debug:
                 print("more match:", true_len, self.scores.shape, (min_i, max_i, min_j, max_j), flush=True)
-                print(self.scores.shape, flush=True)
+                print(self.scores, flush=True)
+
             # tmp_data = self.more_match()
             tmp_data = self.match_old(min_score=min_score)
             if debug:
@@ -179,6 +181,22 @@ class Match:
         if is_T:
             data = [[v, i] for i, v in data]
         return np.array(data)
+    
+    def fmt_scores(self, scores):
+        """优化得分矩阵"""
+        window = self.window + 1
+        len1, len2 = scores.shape
+        # 计算窗口的开始和结束位置
+        start, end = -window, window
+        if len2 >= len1:
+            end += len2 - len1
+        else:
+            start += len2 - len1
+        for i in range(len1):
+            w_start, w_end = max(0, i+start), min(len2, i+end+1)
+            scores[i, :w_start] = 0
+            scores[i, w_end:] = 0
+        return scores
 
     def get_min_max(self, array, scores):
         """获取最小最大值列表"""
