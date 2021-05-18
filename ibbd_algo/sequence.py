@@ -84,10 +84,16 @@ class Match:
             scores[i][w_start:w_end] = conc_map(lambda j: score_func(s1, seq2[j]),
                                                 range(w_start, w_end),
                                                 max_workers=max_workers)
+            if debug and i < 3:
+                print('*'*40)
+                print(seq1[i][:80])
+                print("\n".join([v[:80] for v in seq2[w_start:w_end]]))
 
         self.scores = scores
         self.window = window
         # print(scores[:3, :3])
+        if debug:
+            print(self.scores[:15, :15])
 
     def match(self, min_score=0.2, sort_min_score=0.01, debug=False):
         """快速配对算法（类似贪心算法）
