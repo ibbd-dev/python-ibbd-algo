@@ -13,7 +13,7 @@ from fuzzywuzzy import fuzz
 from diff_match_patch import diff_match_patch
 from ibbd_algo.utils import conc_map
 
-debug = False
+debug = True
 
 
 def text_score(text1, text2, min_text_len=2):
@@ -114,10 +114,14 @@ class Match:
             return np.array(data)
 
         # 顺序不一致或者存在相同的值
+        eq_index = np.zeros((len_index,), dtype=bool)
+        min_arr, max_arr = self.get_min_max(max_index, np.max(scores, axis=1))
         if debug:
             print("begin...", flush=True)
-        eq_index = np.zeros((len_index,), dtype=bool)
-        min_arr, max_arr = self.get_min_max(max_index)
+            print('min: ', min_arr, flush=True)
+            print('max: ', max_arr, flush=True)
+            print('max score: ', np.max(scores, axis=1), flush=True)
+
         for i in range(len_index):
             # 比前面的值都大，比后面的值都小
             if i > 0:
@@ -161,7 +165,7 @@ class Match:
             self.scores = scores[min_i:max_i, min_j:max_j].copy()
             if debug:
                 print("more match:", true_len, self.scores.shape, (min_i, max_i, min_j, max_j), flush=True)
-                print(self.scores, flush=True)
+                print(self.scores.shape, flush=True)
             # tmp_data = self.more_match()
             tmp_data = self.match_old(min_score=min_score)
             if debug:
@@ -176,16 +180,24 @@ class Match:
             data = [[v, i] for i, v in data]
         return np.array(data)
 
-    def get_min_max(self, array):
+    def get_min_max(self, array, scores):
         """获取最小最大值列表"""
         n = array.shape[0]
         # 后面的最小值，前面的最大值
         min_arr, max_arr = np.zeros((n,), dtype=int), np.zeros((n,), dtype=int)
         min_arr[n-1], max_arr[0] = array[n-1], array[0]
+        min_arr[-1] = max(array)
         for i in range(1, n):
-            max_arr[i] = array[i] if array[i] >= max_arr[i-1] else max_arr[i-1]
+            if scores[i] > 0.01:
+                max_arr[i] = array[i] if array[i] >= max_arr[i-1] else max_arr[i-1]
+            else:
+                max_arr[i] = max_arr[i-1]
+
             j = n-i-1
-            min_arr[j] = array[j] if array[j] <= min_arr[j+1] else min_arr[j+1]
+            if scores[j] > 0.01:
+                min_arr[j] = array[j] if array[j] <= min_arr[j+1] else min_arr[j+1]
+            else:
+                min_arr[j] = min_arr[j+1]
 
         return min_arr, max_arr
 
