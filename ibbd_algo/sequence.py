@@ -184,8 +184,9 @@ class Match:
     
     def fmt_scores(self, scores):
         """优化得分矩阵"""
-        window = max(self.window, 1)
         len1, len2 = scores.shape
+        window = 0 if abs(len1-len2) > 4 else self.window
+
         # 计算窗口的开始和结束位置
         start, end = -window, window
         if len2 >= len1:
