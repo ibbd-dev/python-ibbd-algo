@@ -5,6 +5,7 @@ Author: alex
 Created Time: 2020年06月03日 星期三 15时38分10秒
 介绍文章：https://mp.weixin.qq.com/s?__biz=MzU3NDQ3MjI3Nw==&mid=2247484696&idx=1&sn=d8dc0d415a2f1eda30a324a6aefcf98b&chksm=fd30ac22ca472534e26ce7e4344db260c3a9c9ba7d9f6798581bdb3554aec094c4321a7b805d&token=521718035&lang=zh_CN#rd
 '''
+import time
 import numpy as np
 import networkx as nx
 from collections import Counter
@@ -167,11 +168,13 @@ class Match:
             if debug:
                 print("more match:", true_len, self.scores.shape, (min_i, max_i, min_j, max_j), flush=True)
                 print(self.scores[:10, :10], flush=True)
-
-            # tmp_data = self.more_match()
-            tmp_data = self.match_old(min_score=min_score)
-            if debug:
+                time_start = time.time()
+                tmp_data = self.match_old(min_score=min_score)
                 print("tmp data: ", tmp_data)
+                print('time: ', time.time()-time_start)
+            else:
+                # tmp_data = self.more_match()
+                tmp_data = self.match_old(min_score=min_score)
 
             for tmp_i, tmp_v in tmp_data:
                 data.append([tmp_i+min_i, tmp_v+min_j])
