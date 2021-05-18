@@ -342,6 +342,7 @@ class Match:
 
     def create_set(self, all_edges, edges, score, pos, set_i, set_j):
         """创建满足条件的集合"""
+        # TODO 这个递归需要优化
         for curr_pos in range(pos, len(all_edges)):
             i, j = all_edges[curr_pos]
             if len(set_i) > 0 and (i <= max(set_i) or j <= max(set_j)):
