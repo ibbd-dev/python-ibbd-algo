@@ -13,7 +13,7 @@ from fuzzywuzzy import fuzz
 from diff_match_patch import diff_match_patch
 from ibbd_algo.utils import conc_map
 
-debug = True
+debug = False
 
 
 def text_score(text1, text2, min_text_len=2):
