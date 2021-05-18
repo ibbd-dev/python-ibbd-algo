@@ -5,6 +5,7 @@ Author: alex
 Created Time: 2020年06月03日 星期三 15时38分10秒
 介绍文章：https://mp.weixin.qq.com/s?__biz=MzU3NDQ3MjI3Nw==&mid=2247484696&idx=1&sn=d8dc0d415a2f1eda30a324a6aefcf98b&chksm=fd30ac22ca472534e26ce7e4344db260c3a9c9ba7d9f6798581bdb3554aec094c4321a7b805d&token=521718035&lang=zh_CN#rd
 '''
+import time
 import numpy as np
 import networkx as nx
 from collections import Counter
@@ -83,9 +84,16 @@ class Match:
             scores[i][w_start:w_end] = conc_map(lambda j: score_func(s1, seq2[j]),
                                                 range(w_start, w_end),
                                                 max_workers=max_workers)
+            if debug and i < 3:
+                print('*'*40)
+                print(seq1[i][:80])
+                print("\n".join([v[:80] for v in seq2[w_start:w_end]]))
 
         self.scores = scores
+        self.window = window
         # print(scores[:3, :3])
+        if debug:
+            print(self.scores[:15, :15])
 
     def match(self, min_score=0.2, sort_min_score=0.01, debug=False):
         """快速配对算法（类似贪心算法）
@@ -114,10 +122,14 @@ class Match:
             return np.array(data)
 
         # 顺序不一致或者存在相同的值
+        eq_index = np.zeros((len_index,), dtype=bool)
+        min_arr, max_arr = self.get_min_max(max_index, np.max(scores, axis=1))
         if debug:
             print("begin...", flush=True)
-        eq_index = np.zeros((len_index,), dtype=bool)
-        min_arr, max_arr = self.get_min_max(max_index)
+            print('min: ', min_arr, flush=True)
+            print('max: ', max_arr, flush=True)
+            print('max score: ', np.max(scores, axis=1), flush=True)
+
         for i in range(len_index):
             # 比前面的值都大，比后面的值都小
             if i > 0:
@@ -158,14 +170,17 @@ class Match:
             min_j = 0 if len(data) == 0 else data[-1][1]+1
             max_j = scores.shape[1] if i+true_len >= len_index else max_index[i+true_len]
             min_i, max_i = i, i+true_len
-            self.scores = scores[min_i:max_i, min_j:max_j].copy()
+            self.scores = self.fmt_scores(scores[min_i:max_i, min_j:max_j].copy())
             if debug:
                 print("more match:", true_len, self.scores.shape, (min_i, max_i, min_j, max_j), flush=True)
-                print(self.scores, flush=True)
-            # tmp_data = self.more_match()
-            tmp_data = self.match_old(min_score=min_score)
-            if debug:
+                print(self.scores[:10, :10], flush=True)
+                time_start = time.time()
+                tmp_data = self.match_old(min_score=min_score)
                 print("tmp data: ", tmp_data)
+                print('time: ', time.time()-time_start)
+            else:
+                # tmp_data = self.more_match()
+                tmp_data = self.match_old(min_score=min_score)
 
             for tmp_i, tmp_v in tmp_data:
                 data.append([tmp_i+min_i, tmp_v+min_j])
@@ -175,21 +190,46 @@ class Match:
         if is_T:
             data = [[v, i] for i, v in data]
         return np.array(data)
+    
+    def fmt_scores(self, scores):
+        """优化得分矩阵"""
+        len1, len2 = scores.shape
+        window = 0 if abs(len1-len2) > 4 else self.window
 
-    def get_min_max(self, array):
+        # 计算窗口的开始和结束位置
+        start, end = -window, window
+        if len2 >= len1:
+            end += len2 - len1
+        else:
+            start += len2 - len1
+        for i in range(len1):
+            w_start, w_end = max(0, i+start), min(len2, i+end+1)
+            scores[i, :w_start] = 0
+            scores[i, w_end:] = 0
+        return scores
+
+    def get_min_max(self, array, scores):
         """获取最小最大值列表"""
         n = array.shape[0]
         # 后面的最小值，前面的最大值
         min_arr, max_arr = np.zeros((n,), dtype=int), np.zeros((n,), dtype=int)
         min_arr[n-1], max_arr[0] = array[n-1], array[0]
+        min_arr[-1] = max(array)
         for i in range(1, n):
-            max_arr[i] = array[i] if array[i] >= max_arr[i-1] else max_arr[i-1]
+            if scores[i] > 0.01:
+                max_arr[i] = array[i] if array[i] >= max_arr[i-1] else max_arr[i-1]
+            else:
+                max_arr[i] = max_arr[i-1]
+
             j = n-i-1
-            min_arr[j] = array[j] if array[j] <= min_arr[j+1] else min_arr[j+1]
+            if scores[j] > 0.01:
+                min_arr[j] = array[j] if array[j] <= min_arr[j+1] else min_arr[j+1]
+            else:
+                min_arr[j] = min_arr[j+1]
 
         return min_arr, max_arr
 
-    def match_old(self, min_score=None, force_comb=False, len_thr=8):
+    def match_old(self, min_score=None, force_comb=False, len_thr=6):
         """找到最优的匹配（旧版本）
         注意：匹配得到的顺序不能改变
         :param min_score: None|float: 允许匹配的最小得分，如果为None则不做判断
@@ -308,6 +348,7 @@ class Match:
 
     def create_set(self, all_edges, edges, score, pos, set_i, set_j):
         """创建满足条件的集合"""
+        # TODO 这个递归需要优化
         for curr_pos in range(pos, len(all_edges)):
             i, j = all_edges[curr_pos]
             if len(set_i) > 0 and (i <= max(set_i) or j <= max(set_j)):
