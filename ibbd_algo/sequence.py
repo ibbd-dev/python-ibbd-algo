@@ -13,6 +13,7 @@ from itertools import combinations
 from fuzzywuzzy import fuzz
 from diff_match_patch import diff_match_patch
 from ibbd_algo.utils import conc_map
+from shortest_distance import fmt_edges, shortest_distance
 
 debug = False
 
@@ -264,18 +265,10 @@ class Match:
             err_num += np.count_nonzero(where_j[j:] < val_j)
             self.scores[where_i[j], val_j] *= (len_j-err_num)/(len_j)
 
-        # 找到相连的边
-        point_n = max(self.scores.shape)
-        edges = [(i, j+point_n) for i, j in zip(where_i, where_j)]
-        conn_nodes = connected_components(edges)
-        data = []          # 返回值
-        for nodes in conn_nodes:
-            if len(nodes) == 2:
-                # 只有一个关系
-                a, b = min(nodes), max(nodes)
-                data.append((a, b-point_n))
-                continue
-            data += self.parse_edges(edges, nodes, point_n)
+        edges = [(i, j, self.scores[i, j]) for i, j in zip(where_i, where_j)]
+        g_edges, g_nodes = fmt_edges(edges)
+        path = shortest_distance(g_edges, g_nodes)
+        data = [(i, j) for i, j in path if i>=0 and j>=0]
 
         # 重排序
         data = sorted(data, key=lambda x: (x[0], x[1]))
@@ -335,39 +328,7 @@ class Match:
                 continue
             break
         return loss
-
-    def parse_edges(self, edges, nodes, j_diff):
-        """处理特定顶点的边"""
-        edges = [(i, j-j_diff) for i, j in edges if i in nodes]
-        # print("==> ", edges)
-        self.max_score = 0
-        self.max_edges = []
-        self.create_set(edges, [], 0, 0, set(), set())
-        # print('max edges: ', self.max_edges)
-        return self.max_edges
-
-    def create_set(self, all_edges, edges, score, pos, set_i, set_j):
-        """创建满足条件的集合"""
-        # TODO 这个递归需要优化
-        for curr_pos in range(pos, len(all_edges)):
-            i, j = all_edges[curr_pos]
-            if len(set_i) > 0 and (i <= max(set_i) or j <= max(set_j)):
-                # 不满足条件，直接进入下个元素
-                continue
-
-            t_edges = edges.copy()
-            t_set_i, t_set_j = set_i.copy(), set_j.copy()
-            t_edges.append((i, j))
-            t_score = score + self.scores[(i, j)]
-            t_set_i.add(i)
-            t_set_j.add(j)
-            self.create_set(all_edges, t_edges, t_score,
-                            curr_pos+1, t_set_i, t_set_j)
-            if t_score > self.max_score:
-                # print('--> ', t_score, self.max_score)
-                self.max_score = t_score
-                self.max_edges = t_edges
-
+    
     def less_match(self):
         """当数据比较小时，可以使用穷举匹配"""
         max_score = 0

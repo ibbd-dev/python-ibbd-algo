@@ -19,3 +19,4 @@ match = Match(s_lines, d_lines, score_func=lambda l1, l2: text_score(l1, l2, min
 print('===> Match init: ', time.time()-start, flush=True)
 matches = match.match(min_score=0.1, debug=True)
 print('===> Match Page: %d' % len(matches), time.time()-start, flush=True)
+print(matches)
