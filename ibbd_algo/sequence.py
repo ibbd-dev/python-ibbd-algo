@@ -6,6 +6,7 @@ Created Time: 2020年06月03日 星期三 15时38分10秒
 介绍文章：https://mp.weixin.qq.com/s?__biz=MzU3NDQ3MjI3Nw==&mid=2247484696&idx=1&sn=d8dc0d415a2f1eda30a324a6aefcf98b&chksm=fd30ac22ca472534e26ce7e4344db260c3a9c9ba7d9f6798581bdb3554aec094c4321a7b805d&token=521718035&lang=zh_CN#rd
 '''
 import time
+from networkx.algorithms.traversal.edgedfs import edge_dfs
 import numpy as np
 import networkx as nx
 from collections import Counter
@@ -13,6 +14,7 @@ from itertools import combinations
 from fuzzywuzzy import fuzz
 from diff_match_patch import diff_match_patch
 from ibbd_algo.utils import conc_map
+from shortest_distance import fmt_edges, shortest_distance
 
 debug = False
 
@@ -275,7 +277,9 @@ class Match:
                 a, b = min(nodes), max(nodes)
                 data.append((a, b-point_n))
                 continue
-            data += self.parse_edges(edges, nodes, point_n)
+            # print("p", point_n)
+            t_edges = [(i, j-point_n) for i, j in edges if i in nodes]
+            data += self.parse_edges_new(t_edges)
 
         # 重排序
         data = sorted(data, key=lambda x: (x[0], x[1]))
@@ -335,34 +339,51 @@ class Match:
                 continue
             break
         return loss
-
-    def parse_edges(self, edges, nodes, j_diff):
+    
+    def parse_edges_new(self, edges):
         """处理特定顶点的边"""
-        edges = [(i, j-j_diff) for i, j in edges if i in nodes]
+        edges = [(i, j, self.scores[i, j]) for i, j in edges]
+        g_edges, g_nodes = fmt_edges(edges)
+        path = shortest_distance(g_edges, g_nodes)
+        return [(i, j) for i, j in path if i>=0 and j>=0]
+
+    def parse_edges(self, edges):
+        """处理特定顶点的边"""
         # print("==> ", edges)
         self.max_score = 0
         self.max_edges = []
-        self.create_set(edges, [], 0, 0, set(), set())
+        self.all_edges = edges
+        self.create_set([], 0, 0, set(), set())
         # print('max edges: ', self.max_edges)
         return self.max_edges
 
-    def create_set(self, all_edges, edges, score, pos, set_i, set_j):
+    def create_set(self, edges, score, pos, set_i, set_j):
         """创建满足条件的集合"""
         # TODO 这个递归需要优化
-        for curr_pos in range(pos, len(all_edges)):
-            i, j = all_edges[curr_pos]
-            if len(set_i) > 0 and (i <= max(set_i) or j <= max(set_j)):
+        t_edges = edges.copy()
+        i_gt_0 = len(set_i) > 0
+        if i_gt_0:
+            max_i, max_j = max(set_i), max(set_j)
+        else:
+            max_i, max_j = 0, 0
+
+        # 在所有边里，递归选择最优的组合
+        for curr_pos in range(pos, len(self.all_edges)):
+            if i_gt_0 is False:
+                print('pos', curr_pos)
+
+            i, j = self.all_edges[curr_pos]
+            if i_gt_0 and (i <= max_i or j <= max_j):
                 # 不满足条件，直接进入下个元素
                 continue
 
-            t_edges = edges.copy()
             t_set_i, t_set_j = set_i.copy(), set_j.copy()
             t_edges.append((i, j))
             t_score = score + self.scores[(i, j)]
+            # print(i, j, self.scores[(i, j)])
             t_set_i.add(i)
             t_set_j.add(j)
-            self.create_set(all_edges, t_edges, t_score,
-                            curr_pos+1, t_set_i, t_set_j)
+            self.create_set(t_edges, t_score, curr_pos+1, t_set_i, t_set_j)
             if t_score > self.max_score:
                 # print('--> ', t_score, self.max_score)
                 self.max_score = t_score
