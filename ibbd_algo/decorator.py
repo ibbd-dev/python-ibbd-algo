@@ -19,6 +19,7 @@ def Timeout(seconds, callback=None):
             else:
                 # 超时回调函数
                 callback()
+
         @wraps(function)
         def wrapper(*args, **kwargs):
             # SIGALRM: 时钟中断(闹钟)
@@ -40,7 +41,7 @@ def Timeout(seconds, callback=None):
 
 if __name__ == "__main__":
     import time
-    
+
     @Timeout(2)
     def test(i):
         time.sleep(i)
@@ -51,10 +52,11 @@ if __name__ == "__main__":
     except Exception as e:
         print('ok: except timeout')
     test(1.5)
+
     def test(i):
         time.sleep(i)
         return i
-    
+
     func = Timeout(2)(test)
     func(1.5)
     try:

@@ -24,7 +24,7 @@ def conc_map(func, ls_data, max_workers=None):
 def avg(arr):
     """普通的元组与列表等求均值
     如果是numpy则不需要使用该方法"""
-    return sum(arr)/len(arr)
+    return sum(arr) / len(arr)
 
 
 class NumpyJsonEncoder(JSONEncoder):
