@@ -59,7 +59,7 @@ class Optics:
         """生成距离矩阵"""
         n = len(points)
         matrix = np.full((n, n), 0.0)
-        for i in range(n-1):
+        for i in range(n - 1):
             p1 = points[i]
             for j in range(i, n):
                 p2 = points[j]
@@ -188,7 +188,7 @@ if __name__ == "__main__":
     assert max(labels) == 1 and min(labels) == 0
 
     def distance_test(p1, p2):
-        return abs(sum(p1)-sum(p2))
+        return abs(sum(p1) - sum(p2))
 
     # 使用自定义距离
     print("自定义距离: ")
@@ -201,7 +201,7 @@ if __name__ == "__main__":
     print("构造距离矩阵: ")
     n = len(points)
     matrix = np.full((n, n), 0.0)
-    for i in range(n-1):
+    for i in range(n - 1):
         for j in range(i, n):
             d = np.linalg.norm(points[i] - points[j])
             matrix[i, j], matrix[j, i] = d, d
@@ -215,11 +215,11 @@ if __name__ == "__main__":
         """optics算法的距离函数"""
         h1, y1 = line1
         h2, y2 = line2
-        diffy = abs(y1-y2)
+        diffy = abs(y1 - y2)
         hmin, hmax = min(h1, h2), max(h1, h2)
-        if hmax > hmin*2 or diffy > hmin/2:
+        if hmax > hmin * 2 or diffy > hmin / 2:
             return Optics.inf
-        return (hmax-hmin)/hmin + diffy/hmin
+        return (hmax - hmin) / hmin + diffy / hmin
 
     points = [[35.61250305, 163.22396088],
               [41.5479126, 293.8031311],

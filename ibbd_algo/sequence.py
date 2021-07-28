@@ -13,7 +13,7 @@ from itertools import combinations
 from fuzzywuzzy import fuzz
 from diff_match_patch import diff_match_patch
 from ibbd_algo.utils import conc_map
-from shortest_distance import fmt_edges, shortest_distance
+from ibbd_algo.shortest_distance import fmt_edges, shortest_distance
 
 debug = False
 
@@ -43,7 +43,7 @@ def text_score_dmp(text1, text2, min_text_len=2):
             same_len += len(text.encode())
 
     # TODO 直接使用相同字符的数量作为得分应该是比较合理的
-    return 2*same_len / (len(text1.encode())+len(text2.encode()))
+    return 2 * same_len / (len(text1.encode()) + len(text2.encode()))
 
 
 def leave_repeat(arr):
@@ -81,12 +81,12 @@ class Match:
         scores = np.zeros((len1, len2))
         for i, s1 in enumerate(seq1):
             # 一个元素通常只会和另一个序列中相邻的元素产生联系
-            w_start, w_end = max(0, i+start), min(len2, i+end+1)
+            w_start, w_end = max(0, i + start), min(len2, i + end + 1)
             scores[i][w_start:w_end] = conc_map(lambda j: score_func(s1, seq2[j]),
                                                 range(w_start, w_end),
                                                 max_workers=max_workers)
             if debug and i < 3:
-                print('*'*40)
+                print('*' * 40)
                 print(seq1[i][:80])
                 print("\n".join([v[:80] for v in seq2[w_start:w_end]]))
 
@@ -134,11 +134,11 @@ class Match:
         for i in range(len_index):
             # 比前面的值都大，比后面的值都小
             if i > 0:
-                if max_index[i] <= max_arr[i-1]:
+                if max_index[i] <= max_arr[i - 1]:
                     eq_index[i] = True
                     continue
-            if i < len_index-1:
-                if max_index[i] >= min_arr[i+1]:
+            if i < len_index - 1:
+                if max_index[i] >= min_arr[i + 1]:
                     eq_index[i] = True
 
         if debug:
@@ -168,9 +168,9 @@ class Match:
                     break
 
             # 在小区域[min_i:max_i, min_j:max_j]内进行匹配
-            min_j = 0 if len(data) == 0 else data[-1][1]+1
-            max_j = scores.shape[1] if i+true_len >= len_index else max_index[i+true_len]
-            min_i, max_i = i, i+true_len
+            min_j = 0 if len(data) == 0 else data[-1][1] + 1
+            max_j = scores.shape[1] if i + true_len >= len_index else max_index[i + true_len]
+            min_i, max_i = i, i + true_len
             self.scores = self.fmt_scores(scores[min_i:max_i, min_j:max_j].copy())
             if debug:
                 print("more match:", true_len, self.scores.shape, (min_i, max_i, min_j, max_j), flush=True)
@@ -178,24 +178,24 @@ class Match:
                 time_start = time.time()
                 tmp_data = self.match_old(min_score=min_score)
                 print("tmp data: ", tmp_data)
-                print('time: ', time.time()-time_start)
+                print('time: ', time.time() - time_start)
             else:
                 # tmp_data = self.more_match()
                 tmp_data = self.match_old(min_score=min_score)
 
             for tmp_i, tmp_v in tmp_data:
-                data.append([tmp_i+min_i, tmp_v+min_j])
+                data.append([tmp_i + min_i, tmp_v + min_j])
 
         self.scores = self.scores_ori    # 还原
         self.scores_ori = None
         if is_T:
             data = [[v, i] for i, v in data]
         return np.array(data)
-    
+
     def fmt_scores(self, scores):
         """优化得分矩阵"""
         len1, len2 = scores.shape
-        window = 0 if abs(len1-len2) > 4 else self.window
+        window = 0 if abs(len1 - len2) > 4 else self.window
 
         # 计算窗口的开始和结束位置
         start, end = -window, window
@@ -204,7 +204,7 @@ class Match:
         else:
             start += len2 - len1
         for i in range(len1):
-            w_start, w_end = max(0, i+start), min(len2, i+end+1)
+            w_start, w_end = max(0, i + start), min(len2, i + end + 1)
             scores[i, :w_start] = 0
             scores[i, w_end:] = 0
         return scores
@@ -214,19 +214,19 @@ class Match:
         n = array.shape[0]
         # 后面的最小值，前面的最大值
         min_arr, max_arr = np.zeros((n,), dtype=int), np.zeros((n,), dtype=int)
-        min_arr[n-1], max_arr[0] = array[n-1], array[0]
+        min_arr[n - 1], max_arr[0] = array[n - 1], array[0]
         min_arr[-1] = max(array)
         for i in range(1, n):
             if scores[i] > 0.01:
-                max_arr[i] = array[i] if array[i] >= max_arr[i-1] else max_arr[i-1]
+                max_arr[i] = array[i] if array[i] >= max_arr[i - 1] else max_arr[i - 1]
             else:
-                max_arr[i] = max_arr[i-1]
+                max_arr[i] = max_arr[i - 1]
 
-            j = n-i-1
+            j = n - i - 1
             if scores[j] > 0.01:
-                min_arr[j] = array[j] if array[j] <= min_arr[j+1] else min_arr[j+1]
+                min_arr[j] = array[j] if array[j] <= min_arr[j + 1] else min_arr[j + 1]
             else:
-                min_arr[j] = min_arr[j+1]
+                min_arr[j] = min_arr[j + 1]
 
         return min_arr, max_arr
 
@@ -263,12 +263,12 @@ class Match:
             # 如果前面有比当前值大，或者后面有比当前值小，这两种情况都是不常见的，可以减少其权重
             err_num = np.count_nonzero(where_j[:j] > val_j)
             err_num += np.count_nonzero(where_j[j:] < val_j)
-            self.scores[where_i[j], val_j] *= (len_j-err_num)/(len_j)
+            self.scores[where_i[j], val_j] *= (len_j - err_num) / (len_j)
 
         edges = [(i, j, self.scores[i, j]) for i, j in zip(where_i, where_j)]
         g_edges, g_nodes = fmt_edges(edges)
         path = shortest_distance(g_edges, g_nodes)
-        data = [(i, j) for i, j in path if i>=0 and j>=0]
+        data = [(i, j) for i, j in path if i >= 0 and j >= 0]
 
         # 重排序
         data = sorted(data, key=lambda x: (x[0], x[1]))
@@ -291,18 +291,18 @@ class Match:
     def cal_del_ids(self, data):
         """计算需要删除的id"""
         del_ids = []    # 需要删除的
-        for j in range(len(data)-1):
-            if data[j] < data[j+1]:
+        for j in range(len(data) - 1):
+            if data[j] < data[j + 1]:
                 continue     # 这是正常的
             # 保留j的损失
-            loss_right = self.cal_loss_right(data[j+1:], data[j])
+            loss_right = self.cal_loss_right(data[j + 1:], data[j])
             # 保留j+1的损失
-            loss_left = self.cal_loss_left(data[:j+1], data[j+1])
+            loss_left = self.cal_loss_left(data[:j + 1], data[j + 1])
             # print('loss: ', loss_left, loss_right)
             if loss_right > loss_left:    # 右边损失比较大, 保留j+1
-                del_ids += list(range(j-loss_left+1, j+1))
+                del_ids += list(range(j - loss_left + 1, j + 1))
             else:      # 保留j
-                del_ids += list(range(j+1, j+1+loss_right))
+                del_ids += list(range(j + 1, j + 1 + loss_right))
 
         # print('del: ', del_ids)
         # TODO 这里可能需要改进
@@ -328,7 +328,7 @@ class Match:
                 continue
             break
         return loss
-    
+
     def less_match(self):
         """当数据比较小时，可以使用穷举匹配"""
         max_score = 0
@@ -358,19 +358,19 @@ class Match:
         src_len, dst_len = self.scores.shape[:2]
         for sid, did in items:
             if sid - src_last > 1:
-                for tmp_id in range(src_last+1, sid):
+                for tmp_id in range(src_last + 1, sid):
                     new_items.append([tmp_id, -1])
             if did - dst_last > 1:
-                for tmp_id in range(dst_last+1, did):
+                for tmp_id in range(dst_last + 1, did):
                     new_items.append([-1, tmp_id])
 
             new_items.append([sid, did])
             src_last, dst_last = sid, did
-        
+
         # 补充尾页不匹配的情况
-        for tmp_id in range(src_last+1, src_len):
+        for tmp_id in range(src_last + 1, src_len):
             new_items.append([tmp_id, -1])
-        for tmp_id in range(dst_last+1, dst_len):
+        for tmp_id in range(dst_last + 1, dst_len):
             new_items.append([-1, tmp_id])
 
         return new_items
@@ -405,8 +405,8 @@ class Match:
             items.insert(0, item)
             return items
         for idx, (_, val) in enumerate(items):
-            if val == item[1]-1:
-                items.insert(idx+1, item)
+            if val == item[1] - 1:
+                items.insert(idx + 1, item)
                 break
 
         return items

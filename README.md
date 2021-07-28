@@ -56,4 +56,3 @@ def distance(point1, point2):
 optics = Optics(4, 2, distance=distance)
 optics.fit(points)
 ```
-

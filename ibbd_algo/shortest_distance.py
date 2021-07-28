@@ -15,8 +15,8 @@ def fmt_edges(points, max_score=1.):
     points_dict = dict()
     for i, j, score in points:
         # 默认值为虚拟节点
-        points_dict.setdefault(i, [(-1, max_score)]).append((j, max_score-score))
-    
+        points_dict.setdefault(i, [(-1, max_score)]).append((j, max_score - score))
+
     edges, last_nodes = [], [start_node]
     nodes = [start_node]
     for left, points_score in points_dict.items():
@@ -28,7 +28,7 @@ def fmt_edges(points, max_score=1.):
 
         nodes += curr_nodes
         last_nodes = curr_nodes
-    
+
     # 终止节点
     nodes.append(end_node)
     if debug:
@@ -70,6 +70,7 @@ def shortest_distance(edges, nodes, target=None, source=0):
 
 if __name__ == '__main__':
     debug = True
+
     def test(points):
         edges, nodes = fmt_edges(points)
         path = shortest_distance(edges, nodes)
