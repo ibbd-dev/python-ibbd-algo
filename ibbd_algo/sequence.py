@@ -13,7 +13,7 @@ from itertools import combinations
 from fuzzywuzzy import fuzz
 from diff_match_patch import diff_match_patch
 from ibbd_algo.utils import conc_map
-from shortest_distance import fmt_edges, shortest_distance
+from ibbd_algo.shortest_distance import fmt_edges, shortest_distance
 
 debug = False
 
