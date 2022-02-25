@@ -1,8 +1,10 @@
 """
 常用装饰器
 """
+import json
 import signal
 from functools import wraps
+from .utils import md5
 
 
 def Timeout(seconds, callback=None):
@@ -37,6 +39,35 @@ def Timeout(seconds, callback=None):
                 signal.signal(signal.SIGALRM, old)
         return wrapper
     return decorator
+
+
+def CacheFunc(function):
+    """对函数的返回结果进行缓存（使用redis）
+    缓存时可以指定redis连接对象、key前缀、有效期等
+    """
+
+    @wraps(function)
+    def wrapper(*args, redis_connect=None, key_prefix='cf', expire_second=30, **kwargs):
+        """
+        注意:
+        1. 如果函数执行时间过程，redis对象可能会超时
+        2. 注意kwargs中的参数不能和下面三个参数冲突
+        :param redis_connect redis.Redis() redis操作对象，如果该值为None则不进行缓存
+        :param key_prefix str 缓存key前缀
+        :param expire_second int 过期时间，单位：秒
+        """
+        if redis_connect is None:
+            return function(*args, **kwargs)
+        key = "%s:%s:%s" % (key_prefix, function.__name__, md5(str(args) + str(kwargs)[8:24]))
+        data = redis_connect.get(key)
+        if data:
+            return json.loads(data)
+        data = function(*args, **kwargs)
+        redis_connect.set(key, json.dumps(data), ex=expire_second)
+        return data
+
+    return wrapper
+
 
 
 if __name__ == "__main__":

@@ -4,9 +4,15 @@
 Author: alex
 Created Time: 2020年07月01日 星期三 09时42分12秒
 '''
+import hashlib
 import numpy as np
 from json import JSONEncoder
 from concurrent import futures
+
+
+def md5(text: str):
+    """字符hash加密：md5"""
+    return hashlib.md5(text.encode(encoding="UTF-8")).hexdigest()
 
 
 def conc_map(func, ls_data, max_workers=None):
