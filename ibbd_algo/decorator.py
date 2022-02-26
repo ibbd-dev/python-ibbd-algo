@@ -47,23 +47,26 @@ def CacheFunc(function):
     """
 
     @wraps(function)
-    def wrapper(*args, redis_connect=None, key_prefix='cf', expire_second=30, **kwargs):
+    def wrapper(*args, _save_engine=None, _key_prefix='cf', _expire_second=30, **kwargs):
         """
         注意:
-        1. 如果函数执行时间过程，redis对象可能会超时
+        1. 如果函数执行时间过长，如果使用redis连接可能会断开
         2. 注意kwargs中的参数不能和下面三个参数冲突
-        :param redis_connect redis.Redis() redis操作对象，如果该值为None则不进行缓存
-        :param key_prefix str 缓存key前缀
-        :param expire_second int 过期时间，单位：秒
+        3. 缓存保存引擎只需要支持两个接口：
+           (1) get(key) -> value: 根据key获取获取的值
+           (2) set(key, value, ex=seconds): 保存缓存并设置有效期
+        :param _save_engine 缓存保存引擎，如redis.Redis()，如果该值为None则不进行缓存
+        :param _key_prefix str 缓存key前缀
+        :param _expire_second int 过期时间，单位：秒
         """
-        if redis_connect is None:
+        if _save_engine is None:
             return function(*args, **kwargs)
-        key = "%s:%s:%s" % (key_prefix, function.__name__, md5(str(args) + str(kwargs)[8:24]))
-        data = redis_connect.get(key)
+        key = "%s:%s:%s" % (_key_prefix, function.__name__, md5(str(args) + str(kwargs)[8:24]))
+        data = _save_engine.get(key)
         if data:
-            return json.loads(data)
+            return json.loads(data[1:])
         data = function(*args, **kwargs)
-        redis_connect.set(key, json.dumps(data), ex=expire_second)
+        _save_engine.set(key, "-"+json.dumps(data), ex=_expire_second)
         return data
 
     return wrapper

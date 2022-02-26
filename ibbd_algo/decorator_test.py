@@ -15,41 +15,63 @@ redis_pool = redis.ConnectionPool(
 redis_conn = redis.Redis(connection_pool=redis_pool)
 
 
-def test_CacheFunc():
+def test_CacheFunc_int():
     """测试缓存"""
     @CacheFunc
-    def func1(num):
+    def func(num):
         time.sleep(2)
         return num * 10
 
+    start = time.time()
+    num = func(2)
+    assert time.time() - start > 1
+    assert num == 20
+
+    start = time.time()
+    num = func(2, _save_engine=redis_conn, _key_prefix='test1', _expire_second=6)
+    assert time.time() - start > 1
+    assert num == 20
+
+    # 这时已经有缓存了
+    start = time.time()
+    num = func(2, _save_engine=redis_conn, _key_prefix='test1', _expire_second=6)
+    assert time.time() - start < 1
+    assert num == 20
+
+
+def test_CacheFunc_dict():
+    """测试缓存"""
     @CacheFunc
-    def func2(num=2):
+    def func(num=2):
         time.sleep(2)
         return {"num": num * 10}
 
     start = time.time()
-    num = func1(2)
-    assert time.time() - start > 1
-    assert num == 20
-
-    start = time.time()
-    num = func1(2, redis_connect=redis_conn, key_prefix='test', expire_second=6)
-    assert time.time() - start > 1
-    assert num == 20
-
-    # 这时已经有缓存了
-    start = time.time()
-    num = func1(2, redis_connect=redis_conn, key_prefix='test', expire_second=6)
-    assert time.time() - start < 1
-    assert num == 20
-
-    start = time.time()
-    num = func2(num=2, redis_connect=redis_conn, key_prefix='test', expire_second=60)
+    num = func(num=2, _save_engine=redis_conn, _key_prefix='test2', _expire_second=6)
     assert time.time() - start > 1
     assert num['num'] == 20
 
     # 这时已经有缓存了
     start = time.time()
-    num = func2(num=2, redis_connect=redis_conn, key_prefix='test', expire_second=6)
+    num = func(num=2, _save_engine=redis_conn, _key_prefix='test2', _expire_second=6)
     assert time.time() - start < 1
     assert num['num'] == 20
+
+
+def test_CacheFunc_None():
+    """测试缓存"""
+    @CacheFunc
+    def func():
+        time.sleep(2)
+        return None
+
+    start = time.time()
+    res = func(_save_engine=redis_conn, _key_prefix='test3', _expire_second=6)
+    assert time.time() - start > 1
+    assert res is None
+
+    # 这时已经有缓存了
+    start = time.time()
+    res = func(_save_engine=redis_conn, _key_prefix='test3', _expire_second=6)
+    assert time.time() - start < 1
+    assert res is None
